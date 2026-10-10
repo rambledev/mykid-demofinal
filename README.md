@@ -91,7 +91,8 @@ docs/                   security.md, production/ (architecture docs, decision lo
 | `/admin/users` | Admin / Executive accounts of the school (create, edit, delete — never your own role/account) |
 | `/media/{token}` | an uploaded image (permission-checked) |
 | `POST /api` | JSON actions (save, delete, set_status, pickup_*, ...) |
-| `/healthz` | container health check |
+| `/healthz` | container health check (no database) |
+| `/readyz` | database reachable? `ok` (200) / `unavailable` (503) |
 
 Build links with `url('teacher/attendance')`, `rurl('attendance')` (current role section) and `asset_url('assets/...')`.
 Ids that go to the browser always use `tok($table, $id)` / `public_row($table, $row)`; the API decodes with
@@ -123,6 +124,8 @@ APP_KEY=<openssl rand -base64 48 — never change after go-live>
 DEMO_MODE=1   # 0 for real use
 ```
 
+- Test the connection: Coolify → Application → **Terminal** → `php database/check.php` (host, server version,
+  tables, row counts — never the password), or open `https://<domain>/readyz` (`ok` = database reachable).
 - The MariaDB resource stays private (no public port); the app reaches it over Coolify's internal network.
   Tables are created and seeded on the first request. `TRUST_PROXY=1` (Dockerfile default) reads the client IP from
   Traefik's `X-Forwarded-For` for login throttling.

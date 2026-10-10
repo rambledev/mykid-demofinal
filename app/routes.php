@@ -18,6 +18,7 @@ return [
         ['POST',     '/api',           'api',     ['json' => true]],
         ['GET',      '/media/{token}', 'media'],
         ['GET',      '/healthz',       'healthz', ['stateless' => true]],
+        ['GET',      '/readyz',        'readyz',  ['stateless' => true]],
     ],
     'sections' => [
         'admin' => ['role' => 'admin', 'pages' => [
