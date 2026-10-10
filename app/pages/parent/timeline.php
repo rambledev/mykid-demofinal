@@ -46,7 +46,7 @@ page_title('🕘', 'ไทม์ไลน์วันนี้', thai_date() . '
         <ol class="timeline timeline--rich">
             <?php foreach ($events as $ev): ?>
                 <li class="timeline__item kind--<?= e($ev['kind']) ?>">
-                    <span class="timeline__time"><?= e($ev['time']) ?></span>
+                    <span class="timeline__time"><?= e(thai_hm($ev['time'])) ?></span>
                     <span class="timeline__dot" aria-hidden="true"><?= $ev['icon'] ?></span>
                     <div class="timeline__body"><strong><?= e($ev['title']) ?></strong><?php if ($ev['detail']): ?><p><?= e($ev['detail']) ?></p><?php endif; ?>
                         <?php if (!empty($ev['activity_id']) && has_feature('media')) { render_media_strip(media_for('activity', $ev['activity_id']), $ev['title']); } ?></div>

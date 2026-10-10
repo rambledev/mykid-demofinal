@@ -25,7 +25,7 @@ page_title('💬', 'แชทกับผู้ปกครอง', 'เฉพ�
                 <button type="button" class="thread<?= $i === 0 ? ' is-active' : '' ?>" data-action="open-thread" data-thread="<?= e(tok('students', $s['id'])) ?>">
                     <?= student_avatar($s, 'sm') ?>
                     <span class="thread__text"><strong>ผู้ปกครอง<?= e($s['nickname']) ?></strong><small><?= e($last['text'] ?? 'ยังไม่มีข้อความ') ?></small></span>
-                    <?php if ($last): ?><time><?= e(date('H:i', strtotime($last['at']))) ?></time><?php endif; ?>
+                    <?php if ($last): ?><time><?= e(thai_time($last['at'])) ?></time><?php endif; ?>
                 </button>
             </li>
         <?php endforeach; ?>

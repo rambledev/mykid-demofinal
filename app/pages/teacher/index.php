@@ -17,7 +17,7 @@ mk_header(['id' => 'teacher-home', 'title' => 'หน้าหลักครู
         <p class="greeting__name"><?= e($user['name']) ?> · ครูประจำชั้น<?= e($room['name']) ?></p>
         <p class="greeting__date">📅 วันนี้<?= e(thai_date()) ?></p>
     </div>
-    <span class="greeting__clock" data-clock aria-label="เวลาปัจจุบัน"><?= date('H:i') ?></span>
+    <span class="greeting__clock" data-clock aria-label="เวลาปัจจุบัน"><?= e(thai_hm(date('H:i'))) ?></span>
 </section>
 
 <?php render_scope_card($room, count($students), classroom_teachers($cid)); ?>

@@ -92,7 +92,7 @@ function pickup_signature(array $rows): string
 
 function pickup_hm(?string $datetime): string
 {
-    return $datetime ? date('H:i', strtotime($datetime)) : '';
+    return $datetime ? date('H:i', strtotime($datetime)) . ' น.' : ''; // Thai time format
 }
 
 /** Parent: "กำลังไปรับลูก" for ONE of their children. Returns the new row. */

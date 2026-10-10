@@ -322,16 +322,16 @@ function render_activities(array $activities, bool $manage, bool $compact = fals
     if ($manage) {
         echo '<ol class="activity-list">';
         foreach ($activities as $a) {
-            echo '<li class="activity"><span class="activity__time">' . e($a['time']) . '</span><span class="activity__icon" aria-hidden="true">' . $a['icon'] . '</span>'
+            echo '<li class="activity"><span class="activity__time">' . e(thai_hm($a['time'])) . '</span><span class="activity__icon" aria-hidden="true">' . $a['icon'] . '</span>'
                 . '<div class="activity__body"><strong>' . e($a['title']) . '</strong>' . (($a['detail'] ?? '') !== '' ? '<p>' . e($a['detail']) . '</p>' : '') . $mediaOf($a) . '</div>'
-                . '<div class="activity__actions">' . ($canUpload ? btn_upload('activity', $a['id'], $a['time'] . ' ' . $a['title']) : '') . btn_edit('activities', $a) . btn_delete('activities', $a['id'], $a['time'] . ' ' . $a['title']) . '</div></li>';
+                . '<div class="activity__actions">' . ($canUpload ? btn_upload('activity', $a['id'], thai_hm($a['time']) . ' ' . $a['title']) : '') . btn_edit('activities', $a) . btn_delete('activities', $a['id'], thai_hm($a['time']) . ' ' . $a['title']) . '</div></li>';
         }
         echo '</ol>';
         return;
     }
     echo '<ol class="timeline' . ($compact ? ' timeline--compact' : '') . '">';
     foreach ($activities as $a) {
-        echo '<li class="timeline__item"><span class="timeline__time">' . e($a['time']) . '</span><span class="timeline__dot" aria-hidden="true">' . $a['icon'] . '</span>'
+        echo '<li class="timeline__item"><span class="timeline__time">' . e(thai_hm($a['time'])) . '</span><span class="timeline__dot" aria-hidden="true">' . $a['icon'] . '</span>'
             . '<div class="timeline__body"><strong>' . e($a['title']) . '</strong>' . (!$compact && ($a['detail'] ?? '') !== '' ? '<p>' . e($a['detail']) . '</p>' : '') . ($compact ? '' : $mediaOf($a)) . '</div></li>';
     }
     echo '</ol>';
@@ -684,9 +684,9 @@ function render_sleep_card(?array $sleep): void
     ?>
     <div class="sleep-card">
         <div class="sleep-card__times">
-            <div><small>เริ่มนอน</small><strong><?= e($sleep['start'] ?: '--:--') ?></strong></div>
+            <div><small>เริ่มนอน</small><strong><?= e(thai_hm($sleep['start'] ?? '', '--:--')) ?></strong></div>
             <span class="sleep-card__arrow" aria-hidden="true">🌙 → ☀️</span>
-            <div><small>ตื่น</small><strong><?= e($sleep['end'] ?: '--:--') ?></strong></div>
+            <div><small>ตื่น</small><strong><?= e(thai_hm($sleep['end'] ?? '', '--:--')) ?></strong></div>
         </div>
         <p class="sleep-card__duration"><?= $done ? 'นอน ' . e(thai_duration(minutes_between($sleep['start'], $sleep['end']))) : 'ยังไม่มีข้อมูลการนอนวันนี้' ?></p>
         <p><?= tone_badge($quality) ?></p>

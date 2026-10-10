@@ -50,6 +50,13 @@ MariaDB 11.4 LTS runs next to Homebrew MySQL (port 3306, other projects) without
 
 Do **not** use `brew services start mariadb@11.4` — the Homebrew service would point at MySQL's data directory.
 
+## Date & time
+
+Always Thai, in Asia/Bangkok time: Buddhist year and Thai month names ("วันเสาร์ที่ 10 ตุลาคม 2569", "10 ต.ค."),
+24-hour clock with "น." ("14:30 น."). PHP: `thai_date()`, `thai_short_date()`, `thai_time()`, `thai_hm()` in
+`app/lib/helpers.php`; JS: `thaiNow()` in `core.js` (independent of the device's time zone / calendar). The database
+stores ISO values (`Y-m-d`, `Y-m-d H:i:s`) with the session time zone +07:00.
+
 ## Folder structure
 
 ```

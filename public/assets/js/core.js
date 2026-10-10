@@ -16,6 +16,19 @@
   const TOAST_DURATION_MS = 2600;
 
   /* ------------------------------------------------------------------------
+   * Thai date / time — always Asia/Bangkok, Buddhist year, 24 h (whatever the device settings)
+   * --------------------------------------------------------------------- */
+  const THAI_FMT = new Intl.DateTimeFormat('th-TH-u-ca-buddhist-nu-latn', {
+    timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+  });
+  /** Now in Thailand: { date: "10/10/2569", hm: "14:30", hms: "14:30:05" }. */
+  function thaiNow() {
+    const p = Object.fromEntries(THAI_FMT.formatToParts(new Date()).map((x) => [x.type, x.value]));
+    return { date: `${p.day}/${p.month}/${p.year}`, hm: `${p.hour}:${p.minute}`, hms: `${p.hour}:${p.minute}:${p.second}` };
+  }
+
+  /* ------------------------------------------------------------------------
    * Logging (dev only)
    * --------------------------------------------------------------------- */
   const Log = {
@@ -436,12 +449,10 @@
    * Clocks, chart tooltips, polling
    * --------------------------------------------------------------------- */
   function initClocks() {
-    const pad = (n) => String(n).padStart(2, '0');
     const tick = () => {
-      const now = new Date();
-      const hm = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-      $$('[data-clock]').forEach((c) => { c.textContent = hm; });
-      $$('[data-clock-seconds]').forEach((c) => { c.textContent = `${hm}:${pad(now.getSeconds())}`; });
+      const t = thaiNow();
+      $$('[data-clock]').forEach((c) => { c.textContent = `${t.hm} น.`; });
+      $$('[data-clock-seconds]').forEach((c) => { c.textContent = `${t.hms} น.`; });
     };
     tick();
     setInterval(tick, 1000);
@@ -626,8 +637,7 @@
     };
 
     const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-    const pad = (n) => String(n).padStart(2, '0');
-    const stamp = () => { const d = new Date(); return `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; };
+    const stamp = () => { const t = thaiNow(); return `${t.date} ${t.hms} น.`; }; // e.g. 10/10/2569 14:30:05 น.
 
     function signal(el, icon, title, detail = '') {
       el.innerHTML = `<span class="cctv-signal"><span aria-hidden="true">${icon}</span>${esc(title)}${detail ? `<small>${esc(detail)}</small>` : ''}</span>`;
@@ -1002,7 +1012,7 @@
   async function cleanupMedia(button) {
     const ok = await confirmDialog({
       title: 'ล้างไฟล์ภาพที่หมดอายุ?',
-      message: `พบไฟล์ภาพที่หมดอายุ ${Number(button.dataset.files).toLocaleString()} ไฟล์ รวม ${button.dataset.size} ต้องการลบไฟล์เหล่านี้หรือไม่? (ข้อมูลรายการจะยังอยู่ครบ)`,
+      message: `พบไฟล์ภาพที่หมดอายุ ${Number(button.dataset.files).toLocaleString('th-TH')} ไฟล์ รวม ${button.dataset.size} ต้องการลบไฟล์เหล่านี้หรือไม่? (ข้อมูลรายการจะยังอยู่ครบ)`,
       icon: '🗑️',
       okLabel: 'ลบไฟล์',
     });

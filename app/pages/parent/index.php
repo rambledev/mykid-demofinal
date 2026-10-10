@@ -16,7 +16,7 @@ mk_header(['id' => 'parent-home', 'title' => 'หน้าหลักผู้�
         <p class="greeting__child"><?= student_avatar($child, 'sm') ?> <?= e($child['nickname']) ?> · <?= e($room['name']) ?></p>
         <p class="greeting__date">📅 วันนี้<?= e(thai_date()) ?></p>
     </div>
-    <span class="greeting__clock" data-clock aria-label="เวลาปัจจุบัน"><?= date('H:i') ?></span>
+    <span class="greeting__clock" data-clock aria-label="เวลาปัจจุบัน"><?= e(thai_hm(date('H:i'))) ?></span>
 </section>
 
 <div class="dash-grid" data-live id="live-parent-dash">

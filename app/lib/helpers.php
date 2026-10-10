@@ -78,6 +78,15 @@ function thai_short_date(string $date): string
     return date('j', $ts) . ' ' . THAI_MONTHS_SHORT[(int) date('n', $ts)];
 }
 
+/**
+ * Thai clock time from a stored "HH:MM" (or "HH:MM:SS"): "08:00 น." · empty → $empty.
+ * All user-facing dates / times are Thai (Buddhist year, Thai month names, 24 h + "น.", Asia/Bangkok).
+ */
+function thai_hm(?string $hm, string $empty = ''): string
+{
+    return $hm ? substr($hm, 0, 5) . ' น.' : $empty;
+}
+
 /** "10:30 น." — prefixed with a short date when it is not today. */
 function thai_time(?string $datetime): string
 {

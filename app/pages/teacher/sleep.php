@@ -26,7 +26,7 @@ page_title('😴', 'การนอนกลางวัน', thai_date() . ' ·
                 <li class="record">
                     <?= student_avatar($s, 'sm') ?>
                     <div class="record__body"><strong><?= e($s['nickname']) ?></strong>
-                        <small><?= $r && $r['start'] ? e($r['start'] . ' → ' . ($r['end'] ?: '...')) . ($r['end'] ? ' · ' . e(thai_duration(minutes_between($r['start'], $r['end']))) : '') : 'ไม่มีข้อมูล' ?></small></div>
+                        <small><?= $r && $r['start'] ? e(substr($r['start'], 0, 5) . ' → ' . ($r['end'] ? thai_hm($r['end']) : '...')) . ($r['end'] ? ' · ' . e(thai_duration(minutes_between($r['start'], $r['end']))) : '') : 'ไม่มีข้อมูล' ?></small></div>
                     <?= tone_badge(cat_find('sleep', $r['quality'] ?? null)) ?>
                     <?php if ($r): ?><?= btn_edit('sleepRecords', $r) ?><?php endif; ?>
                 </li>
