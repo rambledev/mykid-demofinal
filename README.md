@@ -25,7 +25,9 @@ php -d upload_max_filesize=12M -d post_max_size=64M -d memory_limit=256M -S 127.
 
 - There is **no demo data**: install creates only the tables, the school and the first admin account; the admin enters
   classrooms, teachers, students and accounts. Until a school exists, every page shows "ระบบยังไม่พร้อมใช้งาน".
-- `php database/install.php --reset --school=... ...` drops every table (all data is lost) and sets up again.
+- `php database/install.php --reset --school=... ...` drops every table (all data is lost) and sets up again. Every
+  argument is validated first — a wrong value stops before anything is dropped. An easy PIN (000000, 123456, …) needs
+  `--allow-weak-pin`; change it after the first login (/admin/users → edit your own account).
 - `php database/check.php` tests the connection; missing tables / new columns are applied automatically (`schema.sql`).
 
 ### Every school day
