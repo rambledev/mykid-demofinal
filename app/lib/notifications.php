@@ -5,6 +5,7 @@
  * One row per recipient in userNotifications:
  *   id, school_id, user_id, type, title, message, reference_type, reference_id, created_at, read_at
  *
+ * Chat messages notify the other side (app/lib/chat.php) — one unread notification per thread.
  * In-app only: no push, no external provider. The unread count is shown as a red badge on the
  * "แจ้งเตือน" menu and refreshed by the page polling (api "version" / "pickup_status").
  * A user can only ever see / mark their OWN notifications (user_id from the session).
@@ -16,6 +17,7 @@ const NOTIFICATION_TYPES = [
     'announcement' => ['emoji' => '📢', 'label' => 'ประกาศ'],
     'activity'     => ['emoji' => '🎨', 'label' => 'กิจกรรม'],
     'status'       => ['emoji' => '📝', 'label' => 'สถานะนักเรียน'],
+    'chat'         => ['emoji' => '💬', 'label' => 'ข้อความ'],
 ];
 
 /** Build one notification row (used inside store_mutate() callers and by the seed). */
@@ -107,6 +109,7 @@ function notification_link(array $user, array $n): ?string
     return match ($n['reference_type']) {
         'pickup'    => url($user['meta']['dir'] . '/pickup'),
         'portfolio' => url($user['meta']['dir'] . '/works'),
+        'chat'      => url($user['meta']['dir'] . '/chat/' . tok('students', (int) $n['reference_id'])),
         default     => null,
     };
 }

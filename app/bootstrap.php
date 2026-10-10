@@ -55,6 +55,7 @@ require_once MK_LIB . '/permissions.php';
 require_once MK_LIB . '/cctv.php';
 require_once MK_LIB . '/media.php';
 require_once MK_LIB . '/notifications.php';
+require_once MK_LIB . '/chat.php';
 require_once MK_LIB . '/pickup.php';
 require_once MK_LIB . '/auth.php';
 require_once MK_LIB . '/data-filter.php';

@@ -114,6 +114,7 @@ function error_page(int $status, string $title, string $text): never
     header('Content-Type: text/html; charset=UTF-8');
     echo '<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
         . '<meta name="robots" content="noindex"><title>' . e($title) . ' | Mykid</title>'
+        . '<link rel="icon" type="image/svg+xml" href="' . e(asset_url('favicon.svg')) . '">'
         . '<link rel="stylesheet" href="' . e(asset_url('assets/css/base.css')) . '"></head>'
         . '<body class="layout-landing theme-landing"><main class="page page--landing" style="display:grid;place-items:center;min-height:80vh;text-align:center">'
         . '<div><p style="font-size:3rem;margin:0">☀️</p><h1>' . e($title) . '</h1><p>' . e($text) . '</p>'

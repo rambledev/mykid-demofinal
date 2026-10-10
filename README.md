@@ -50,6 +50,15 @@ MariaDB 11.4 LTS runs next to Homebrew MySQL (port 3306, other projects) without
 
 Do **not** use `brew services start mariadb@11.4` — the Homebrew service would point at MySQL's data directory.
 
+## Chat
+
+Parent ↔ the child's classroom teachers, one thread per student ([app/lib/chat.php](app/lib/chat.php)).
+Chat pages poll `chat_poll` every 2.5 s (15 s in a background tab) for messages newer than the last one shown —
+also while typing. Sending notifies the other side in the same write (one unread in-app notification per thread);
+the thread on screen is marked read (`messages.read_at`) → unread badges on the "แชท" menu / thread list and
+"✓ อ่านแล้ว" under the sender's last message. `/teacher/chat/{token}` and `/parent/chat/{token}` open one thread
+(notification links; parents with several children pick the child).
+
 ## Date & time
 
 Always Thai, in Asia/Bangkok time: Buddhist year and Thai month names ("วันเสาร์ที่ 10 ตุลาคม 2569", "10 ต.ค."),

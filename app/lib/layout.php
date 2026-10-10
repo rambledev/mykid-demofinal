@@ -29,6 +29,7 @@ function mk_header(array $page): void
     <meta name="theme-color" content="<?= e($themeColor) ?>">
     <meta name="robots" content="noindex">
     <title><?= e(($page['title'] ? $page['title'] . ' | ' : '') . pkg()['name']) ?></title>
+    <link rel="icon" type="image/svg+xml" href="<?= e(asset_url('favicon.svg')) ?>">
     <link rel="stylesheet" href="<?= e(asset_url('assets/css/base.css')) ?>">
     <link rel="stylesheet" href="<?= e(asset_url('assets/css/core.css')) ?>">
     <link rel="stylesheet" href="<?= e(asset_url('assets/css/style.css')) ?>">
@@ -115,7 +116,7 @@ function render_sidebar(array $user, string $active): void
         <nav class="sidebar__nav">
             <?php foreach (nav_items($user['role']) as [$key, $label, $href, $iconName]): ?>
                 <a class="sidebar__item<?= $key === $active ? ' is-active' : '' ?>" href="<?= e(url($href)) ?>"<?= $key === $active ? ' aria-current="page"' : '' ?>>
-                    <?= icon($iconName) ?><span><?= e($label) ?></span><?= $key === 'notifications' && has_notification_menu($user) ? notif_badge() : '' ?>
+                    <?= icon($iconName) ?><span><?= e($label) ?></span><?= $key === 'notifications' && has_notification_menu($user) ? notif_badge() : '' ?><?= $key === 'chat' ? chat_badge() : '' ?>
                 </a>
             <?php endforeach; ?>
         </nav>
@@ -141,7 +142,7 @@ function render_bottom_nav(array $user, string $active): void
     <nav class="bottom-nav" aria-label="เมนูหลัก" style="grid-template-columns: repeat(<?= count($items) ?>, 1fr)">
         <?php foreach ($items as [$key, $label, $href, $iconName]): ?>
             <a class="bottom-nav__item<?= $key === $active ? ' is-active' : '' ?>" href="<?= e(url($href)) ?>"<?= $key === $active ? ' aria-current="page"' : '' ?>>
-                <?= icon($iconName) ?><span><?= e($label) ?></span><?= $key === $badgeKey ? notif_badge() : '' ?>
+                <?= icon($iconName) ?><span><?= e($label) ?></span><?= $key === $badgeKey ? notif_badge() : '' ?><?= $key === 'chat' ? chat_badge() : '' ?>
             </a>
         <?php endforeach; ?>
     </nav>

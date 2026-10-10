@@ -108,6 +108,7 @@
     }
     if (data.version) CFG.version = data.version;
     if (typeof data.unread === 'number') Notifications.setBadges(data.unread);
+    if (typeof data.chatUnread === 'number') Chat.setBadge(data.chatUnread);
     if (!quiet) Log.end('api', { action, version: data.version });
     return data;
   }
@@ -302,22 +303,140 @@
     $$('[data-thread-panel]', layout).forEach((p) => { p.hidden = p.dataset.threadPanel !== activeThread; });
     layout.classList.add('is-thread-open');
     scrollChats();
+    Chat.pollSoon();
   }
 
   function scrollChats() {
     $$('[data-chat-scroll]').forEach((box) => { box.scrollTop = box.scrollHeight; });
   }
 
-  async function sendMessage(form) {
-    const input = form.elements.text;
-    const text = input.value.trim();
-    if (!text) return;
-    const ok = await runAction(form.querySelector('[type="submit"]'), 'send_message', { student_id: form.dataset.student, text });
-    if (ok) {
-      const fresh = $(`[data-chat-form][data-student="${form.dataset.student}"] input[name="text"]`);
-      if (fresh) fresh.focus();
-    }
+  function sendMessage(form) {
+    return Chat.send(form);
   }
+
+  /* ------------------------------------------------------------------------
+   * Chat — near-realtime: polls "chat_poll" every 2.5 s (also while typing), appends new bubbles,
+   * marks the visible thread read, keeps unread badges + "อ่านแล้ว" in sync.
+   * --------------------------------------------------------------------- */
+  const CHAT_POLL_MS = 2500;
+  const CHAT_POLL_HIDDEN_MS = 15000;
+  const Chat = {
+    timer: null,
+    busy: false,
+
+    /** The thread on screen: parent page = the only one; teacher = the open panel. */
+    visible() {
+      const layout = $('[data-chat-layout]');
+      if (!layout) return $('[data-chat]');
+      const panel = $$('[data-thread-panel]', layout).find((p) => !p.hidden);
+      const panelShown = layout.classList.contains('is-thread-open') || window.matchMedia('(min-width: 900px)').matches;
+      return panel && panelShown ? $('[data-chat]', panel) : null;
+    },
+
+    setBadge(count) {
+      $$('[data-chat-badge]').forEach((b) => {
+        b.hidden = !count;
+        b.textContent = count > 99 ? '99+' : String(count);
+        b.setAttribute('aria-label', `ข้อความยังไม่ได้อ่าน ${count} ข้อความ`);
+      });
+    },
+
+    bubble(m) {
+      const li = document.createElement('li');
+      li.className = `bubble${m.mine ? ' bubble--me' : ''}`;
+      li.dataset.msg = m.id;
+      li.innerHTML = '<span class="bubble__sender"></span><p class="bubble__text"></p><time class="bubble__time"></time>';
+      $('.bubble__sender', li).textContent = m.sender;
+      $('.bubble__text', li).textContent = m.text;
+      $('.bubble__time', li).textContent = m.time;
+      return li;
+    },
+
+    /** Append messages not shown yet; keep the view at the bottom when the user was there. */
+    append(chat, messages) {
+      if (!chat || !messages.length) return 0;
+      const list = $('[data-chat-scroll]', chat);
+      const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
+      let added = 0;
+      messages.forEach((m) => {
+        if ($(`[data-msg="${m.id}"]`, list)) return;
+        const empty = $('[data-chat-empty]', list);
+        if (empty) empty.remove();
+        list.appendChild(this.bubble(m));
+        chat.dataset.chatLast = m.id;
+        added += 1;
+        if (m.mine) $('[data-chat-seen]', chat).hidden = true; // new message of mine: not read yet
+      });
+      if (added && (atBottom || messages[messages.length - 1].mine)) list.scrollTop = list.scrollHeight;
+      const last = messages[messages.length - 1];
+      const preview = $(`[data-thread="${chat.dataset.chatThread}"] [data-thread-preview]`);
+      if (preview && last) preview.textContent = last.text;
+      return added;
+    },
+
+    updateThreads(threads) {
+      $$('[data-thread]').forEach((t) => {
+        const n = threads[t.dataset.thread] || 0;
+        t.classList.toggle('has-unread', n > 0);
+        const badge = $('[data-thread-unread]', t);
+        if (badge) { badge.hidden = !n; badge.textContent = String(n); }
+      });
+    },
+
+    async poll() {
+      const chat = this.visible() || $('[data-chat]'); // list view still refreshes the unread badges
+      if (!chat || this.busy) return;
+      this.busy = true;
+      const read = Boolean(this.visible()) && !document.hidden;
+      try {
+        const data = await api('chat_poll', { student_id: chat.dataset.chatThread, after: chat.dataset.chatLast || '', read }, { quiet: true });
+        const added = this.append(chat, data.messages || []);
+        if (added) Log.info('Chat.poll', 'new messages', { added });
+        $('[data-chat-seen]', chat).hidden = !data.seen;
+        this.updateThreads(data.threads || {});
+      } catch (error) {
+        Log.error('Chat.poll', error, {});
+      } finally {
+        this.busy = false;
+      }
+    },
+
+    schedule() {
+      clearTimeout(this.timer);
+      this.timer = setTimeout(async () => { await this.poll(); this.schedule(); }, document.hidden ? CHAT_POLL_HIDDEN_MS : CHAT_POLL_MS);
+    },
+
+    pollSoon() {
+      if (!$('[data-chat]')) return;
+      clearTimeout(this.timer);
+      this.timer = setTimeout(async () => { await this.poll(); this.schedule(); }, 50);
+    },
+
+    async send(form) {
+      const input = form.elements.text;
+      const text = input.value.trim();
+      if (!text) return;
+      const button = form.querySelector('[type="submit"]');
+      setBusy(button, true);
+      try {
+        const data = await api('send_message', { student_id: form.dataset.student, text });
+        input.value = '';
+        this.append(form.closest('[data-chat]'), [data.chat]);
+      } catch (error) {
+        toast(error instanceof UserError ? error.message : 'ส่งข้อความไม่สำเร็จ กรุณาลองใหม่อีกครั้ง', 'error');
+      } finally {
+        setBusy(button, false);
+        input.focus();
+      }
+    },
+
+    init() {
+      if (!$('[data-chat]')) return;
+      Log.info('Chat.init', 'polling', { intervalMs: CHAT_POLL_MS });
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) this.pollSoon(); });
+      this.pollSoon();
+    },
+  };
 
   /* ------------------------------------------------------------------------
    * Filters, tabs, school picker (client-side, within already-scoped data)
@@ -1122,10 +1241,14 @@
     });
     scrollChats();
     CCTV.scan();
-    if (window.matchMedia('(min-width: 900px)').matches) {
+    const wanted = $('[data-chat-layout]') && $('[data-chat-layout]').dataset.chatOpen;
+    if (wanted) {
+      openThread(wanted);
+    } else if (window.matchMedia('(min-width: 900px)').matches) {
       const first = $('[data-chat-layout] [data-thread]');
       if (first) openThread(first.dataset.thread);
     }
+    Chat.init();
     if (CFG.toast) toast(CFG.toast.message || CFG.toast, CFG.toast.type || 'success');
     Log.end('init');
   });

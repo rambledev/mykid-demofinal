@@ -666,21 +666,31 @@ function render_confirm_sheet(): void
  * ========================================================================= */
 
 /** One conversation. $me = 'parent' | 'teacher' (whose bubbles sit on the right). */
-function render_chat_thread(array $messages, string $me, int $studentId): void
+/**
+ * One chat thread. core.js polls "chat_poll" for messages newer than data-chat-last and appends them,
+ * marks the thread read while it is on screen, and shows "อ่านแล้ว" under my last message.
+ */
+function render_chat_thread(array $messages, array $user, int $studentId): void
 {
+    $thread = tok('students', $studentId);
+    $last = $messages ? end($messages) : null;
+    $mine = array_values(array_filter($messages, fn ($m) => $m['from'] === chat_side($user)));
+    $seen = $mine && (end($mine)['read_at'] ?? null) !== null;
     ?>
-    <div class="chat" data-chat>
-        <ol class="chat__messages" data-chat-scroll>
-            <?php if (!$messages): ?><li class="chat__empty">ยังไม่มีข้อความ เริ่มพูดคุยได้เลย 💬</li><?php endif; ?>
+    <div class="chat" data-chat data-chat-thread="<?= e($thread) ?>" data-chat-last="<?= e($last ? tok('messages', $last['id']) : '') ?>">
+        <ol class="chat__messages" data-chat-scroll aria-live="polite">
+            <?php if (!$messages): ?><li class="chat__empty" data-chat-empty>ยังไม่มีข้อความ เริ่มพูดคุยได้เลย 💬</li><?php endif; ?>
             <?php foreach ($messages as $m): ?>
-                <li class="bubble<?= $m['from'] === $me ? ' bubble--me' : '' ?>">
-                    <span class="bubble__sender"><?= e($m['sender']) ?></span>
-                    <p class="bubble__text"><?= e($m['text']) ?></p>
-                    <time class="bubble__time"><?= e(thai_time($m['at'])) ?></time>
+                <?php $pub = chat_message_public($m, $user); ?>
+                <li class="bubble<?= $pub['mine'] ? ' bubble--me' : '' ?>" data-msg="<?= e($pub['id']) ?>">
+                    <span class="bubble__sender"><?= e($pub['sender']) ?></span>
+                    <p class="bubble__text"><?= e($pub['text']) ?></p>
+                    <time class="bubble__time"><?= e($pub['time']) ?></time>
                 </li>
             <?php endforeach; ?>
         </ol>
-        <form class="chat__composer" data-chat-form data-student="<?= e((string) tok('students', $studentId)) ?>">
+        <p class="chat__seen" data-chat-seen<?= $seen ? '' : ' hidden' ?>>✓ อ่านแล้ว</p>
+        <form class="chat__composer" data-chat-form data-student="<?= e($thread) ?>">
             <input class="input" type="text" name="text" maxlength="300" placeholder="พิมพ์ข้อความ..." aria-label="พิมพ์ข้อความ" autocomplete="off" required>
             <button type="submit" class="btn btn--primary chat__send" aria-label="ส่งข้อความ"><?= icon('send') ?></button>
         </form>

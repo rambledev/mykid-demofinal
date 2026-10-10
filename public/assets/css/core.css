@@ -1123,3 +1123,14 @@
   .leaderboard--ranked li { grid-template-columns: 30px auto 1fr auto; }
   .leaderboard--ranked li .btn { grid-column: 3 / -1; justify-self: end; }
 }
+
+/* ---------- Chat: unread markers + "อ่านแล้ว" ---------- */
+.thread__meta { display: grid; justify-items: end; gap: 4px; margin-left: auto; }
+.thread__unread {
+  display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px;
+  border-radius: 999px; background: var(--danger); color: #fff; font-size: 12px; font-weight: 800; line-height: 1;
+}
+.thread.has-unread .thread__text strong { color: var(--ink); }
+.thread.has-unread .thread__text small { color: var(--ink); font-weight: 700; }
+.chat__seen { margin: 2px 6px 0 auto; font-size: 12px; color: var(--ink-soft); text-align: right; }
+.chat-card + .chip-row, .chip-row + .chat-card { margin-top: 12px; }

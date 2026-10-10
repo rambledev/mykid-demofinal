@@ -164,7 +164,7 @@ try {
     switch ($action) {
         case 'version':
             // also the unread in-app notification count (red badge) — polled by every page
-            json_response(['ok' => true, 'version' => store_state()['version'], 'unread' => notifications_unread_count($user)]);
+            json_response(['ok' => true, 'version' => store_state()['version'], 'unread' => notifications_unread_count($user), 'chatUnread' => chat_unread_total($user)]);
 
         case 'save':
             $table = (string) ($input['table'] ?? '');
@@ -434,16 +434,36 @@ try {
             break;
 
         case 'send_message':
-            authorize(can_write_table($user, 'messages'), 'บัญชีนี้ไม่มีสิทธิ์ส่งข้อความ', ['role' => $user['role']]);
+            // Chat (app/lib/chat.php): message + notification for the other side in one write.
+            authorize(has_feature('chat') && can_write_table($user, 'messages'), 'บัญชีนี้ไม่มีสิทธิ์ส่งข้อความ', ['role' => $user['role']]);
             $text = trim((string) ($input['text'] ?? ''));
             if ($text === '') {
                 throw new DemoValidationException('กรุณาพิมพ์ข้อความ');
             }
-            $row = apply_write_scope($user, 'messages', ['student_id' => in_id($input, 'student_id', 'students')]);
-            $sender = $user['role'] === 'parent' ? 'คุณ' . ($user['relation'] ?? 'แม่') : $user['name'];
-            store_insert('messages', $row + ['from' => $user['role'], 'sender' => $sender, 'text' => mb_substr($text, 0, 300), 'at' => date('Y-m-d H:i:s')]);
-            $message = 'ส่งข้อความแล้ว';
-            break;
+            $row = chat_send($user, in_id($input, 'student_id', 'students'), $text);
+            json_response(['ok' => true, 'chat' => chat_message_public($row, $user), 'version' => store_state()['version'],
+                'unread' => notifications_unread_count($user), 'chatUnread' => chat_unread_total($user)]);
+
+        case 'chat_poll':
+            // Near-realtime chat: messages newer than `after` (token) in one thread + unread counts per thread.
+            authorize(has_feature('chat') && can_read_table($user, 'messages'), 'ไม่สามารถดำเนินการได้');
+            $studentId = in_id($input, 'student_id', 'students');
+            authorize(chat_can_access($user, $studentId), 'ไม่มีสิทธิ์ดูห้องแชทนี้', ['user' => $user['id'], 'student' => $studentId]);
+            if (!empty($input['read'])) {
+                chat_mark_read($user, $studentId); // the thread is on screen
+            }
+            $afterId = ($input['after'] ?? '') !== '' ? (untok('messages', $input['after']) ?? 0) : 0;
+            $unread = [];
+            foreach (chat_unread_counts($user) as $sid => $n) {
+                $unread[tok('students', $sid)] = $n;
+            }
+            $thread = chat_thread($studentId);
+            $lastMine = array_values(array_filter($thread, fn ($m) => $m['from'] === chat_side($user)));
+            json_response(['ok' => true,
+                'messages' => array_map(fn ($m) => chat_message_public($m, $user), array_values(array_filter($thread, fn ($m) => $m['id'] > $afterId))),
+                'seen' => $lastMine ? (end($lastMine)['read_at'] ?? null) !== null : false, // "อ่านแล้ว" under my last message
+                'threads' => $unread, 'chatUnread' => array_sum($unread),
+                'unread' => notifications_unread_count($user), 'version' => store_state()['version']]);
 
         case 'reset_demo':
             authorize(demo_mode(), 'ไม่สามารถดำเนินการได้', ['reason' => 'DEMO_MODE off']); // never wipes real data
@@ -465,7 +485,7 @@ try {
     }
 
     mk_log('Api', 'request END', ['action' => $action, 'user' => $user['id'], 'version' => store_state()['version']]);
-    json_response(['ok' => true, 'message' => $message, 'version' => store_state()['version'], 'unread' => notifications_unread_count($user)]);
+    json_response(['ok' => true, 'message' => $message, 'version' => store_state()['version'], 'unread' => notifications_unread_count($user), 'chatUnread' => chat_unread_total($user)]);
 } catch (PermissionDeniedException $ex) {
     mk_log('Api', 'permission ERROR', ['action' => $action, 'user' => $user['id'], 'role' => $user['role'], 'error' => $ex->getMessage(), 'input' => $input]);
     json_response(['ok' => false, 'message' => $ex->getMessage()], 403);

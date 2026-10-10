@@ -24,6 +24,9 @@ return [
         ['GET',      '/executive/stars/{month}', 'common/stars', ['role' => 'executive']],
         ['GET',      '/teacher/stars/{month}',   'common/stars', ['role' => 'teacher']],
         ['GET',      '/parent/stars/{month}',    'parent/stars', ['role' => 'parent']],
+        // Chat: open one thread directly (from a notification) — {student} = student id token
+        ['GET',      '/teacher/chat/{student}',  'teacher/chat', ['role' => 'teacher']],
+        ['GET',      '/parent/chat/{student}',   'parent/chat',  ['role' => 'parent']],
     ],
     'sections' => [
         'admin' => ['role' => 'admin', 'pages' => [
