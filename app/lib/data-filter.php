@@ -71,6 +71,14 @@ function my_classrooms(): array
     return $rooms;
 }
 
+/** Every classroom of the user's school (for school-wide features such as ธนาคารความดี). */
+function my_classrooms_all(): array
+{
+    $rooms = where(store_rows('classrooms'), 'school_id', current_user()['school_id']);
+    usort($rooms, fn ($a, $b) => $a['name'] <=> $b['name']);
+    return $rooms;
+}
+
 function classroom_students(int $classroomId): array
 {
     return where(scoped('students'), 'classroom_id', $classroomId);

@@ -22,6 +22,13 @@ function role_rules(string $role): array
     return permission_matrix()[$role] ?? ['scope' => 'none', 'read' => [], 'write' => []];
 }
 
+/** The scope that applies to one table for this user (role scope, or a per-table override). */
+function table_scope(array $user, string $table): string
+{
+    $rules = role_rules($user['role']);
+    return $rules['tableScope'][$table] ?? $rules['scope'];
+}
+
 function can_read_table(array $user, string $table): bool
 {
     $read = role_rules($user['role'])['read'];
@@ -41,7 +48,7 @@ function is_read_only(array $user): bool
 /** Is this row inside the user's scope? (school → classroom → student) */
 function row_in_scope(array $user, string $table, array $row): bool
 {
-    $scope = role_rules($user['role'])['scope'];
+    $scope = table_scope($user, $table);
     $level = table_def($table)['level'];
 
     // 1. SCHOOL SCOPE — every user is locked to their own school.
@@ -89,7 +96,7 @@ function authorize(bool $allowed, string $message, array $context = []): void
 function apply_write_scope(array $user, string $table, array $data): array
 {
     $level = table_def($table)['level'];
-    $scope = role_rules($user['role'])['scope'];
+    $scope = table_scope($user, $table);
     $ctx = ['user' => $user['id'], 'role' => $user['role'], 'table' => $table];
 
     // SCHOOL — always forced from the session.
@@ -117,7 +124,8 @@ function apply_write_scope(array $user, string $table, array $data): array
     if ($level === 'student') {
         $studentId = $scope === 'student' ? $user['student_id'] : (int) ($data['student_id'] ?? 0);
         $student = find_row('students', $studentId);
-        authorize($student !== null && row_in_scope($user, 'students', $student), 'ไม่มีสิทธิ์จัดการข้อมูลของเด็กคนนี้', $ctx + ['student_id' => $studentId]);
+        $allowed = $student !== null && ($scope === 'school' ? $student['school_id'] === $user['school_id'] : row_in_scope($user, 'students', $student));
+        authorize($allowed, 'ไม่มีสิทธิ์จัดการข้อมูลของเด็กคนนี้', $ctx + ['student_id' => $studentId]);
         $data['student_id'] = $student['id'];
         $data['classroom_id'] = $student['classroom_id'];
         $data['school_id'] = $student['school_id'];

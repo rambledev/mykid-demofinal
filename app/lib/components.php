@@ -504,9 +504,13 @@ function field_options(array $field): array
     return match ($field['type']) {
         'classroom' => array_column(array_map(fn ($r) => ['id' => $r['id'], 'label' => classroom_label($r)], my_classrooms()), 'label', 'id'),
         'school'    => array_column(scoped('schools'), 'name', 'id'),
-        'student'   => (function () {
+        'student'   => (function () use ($field) {
             $options = [];
-            foreach (scoped('students') as $s) {
+            $user = current_user();
+            // schoolWide (ธนาคารความดี): every student of the school, grouped by room order
+            $students = !empty($field['schoolWide']) ? where(store_rows('students'), 'school_id', $user['school_id']) : scoped('students');
+            usort($students, fn ($a, $b) => [$a['classroom_id'], $a['nickname']] <=> [$b['classroom_id'], $b['nickname']]);
+            foreach ($students as $s) {
                 $room = find_row('classrooms', $s['classroom_id']);
                 $options[$s['id']] = $s['nickname'] . ' · ' . ($room['name'] ?? '');
             }

@@ -104,7 +104,7 @@ function mk_tables(): array
         // parent_id resolved on the server from parentStudents; student_id keeps the row in the child's scope).
         'stars' => ['label' => 'ดาวธนาคารความดี', 'level' => 'student', 'fields' => [
             'recipient'  => ['label' => 'ให้ดาวกับ', 'type' => 'select', 'required' => true, 'options' => 'starRecipients'],
-            'student_id' => ['label' => 'นักเรียน', 'type' => 'student', 'required' => true],
+            'student_id' => ['label' => 'นักเรียน (ผู้ปกครอง: เลือกนักเรียนของผู้ปกครองคนนั้น)', 'type' => 'student', 'required' => true, 'schoolWide' => true],
             'points'     => ['label' => 'จำนวนดาว', 'type' => 'number', 'min' => 1, 'max' => 10, 'required' => true],
             'reason'     => ['label' => 'ความดีที่ทำ', 'type' => 'text', 'required' => true, 'max' => 60, 'placeholder' => 'เช่น ช่วยเก็บของ / สวมหมวกกันน็อก', 'suggest' => ['starReasons', 'parentStarReasons']],
         ]],
