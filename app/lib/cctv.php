@@ -19,7 +19,6 @@
  *
  * Every page, dashboard card and API call uses can_view_camera() / accessible_cameras(),
  * so the rules live in exactly one place:
- *   super_admin        → every camera of every school
  *   admin / executive  → every camera of their own school (executive is read only)
  *   teacher / parent   → same school + active camera + (own classroom camera OR common area)
  *                        + an explicit row in cameraPermissions for their role & classroom
@@ -57,9 +56,6 @@ function can_view_camera(array $camera, array $user): bool
 {
     if (!has_feature('cctv')) {
         return false;
-    }
-    if ($user['role'] === 'super_admin') {
-        return true;
     }
     // School isolation — scope comes from the session user, never the request.
     if (($camera['school_id'] ?? null) !== $user['school_id']) {

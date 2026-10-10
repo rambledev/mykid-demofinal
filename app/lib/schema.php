@@ -35,10 +35,10 @@ function mk_tables(): array
             'province'  => ['label' => 'จังหวัด', 'type' => 'text', 'max' => 40],
             'status'    => ['label' => 'สถานะ', 'type' => 'select', 'options' => ['active' => 'ใช้งาน', 'trial' => 'ทดลองใช้']],
         ]],
-        'users' => ['label' => 'ผู้ดูแลโรงเรียน', 'level' => 'school', 'fields' => [
+        'users' => ['label' => 'บัญชีผู้ดูแล', 'level' => 'school', 'fields' => [
             'name'      => ['label' => 'ชื่อที่แสดง', 'type' => 'text', 'required' => true, 'max' => 60],
             'role'      => ['label' => 'บทบาท', 'type' => 'select', 'required' => true, 'options' => ['admin' => '🛡️ Admin โรงเรียน', 'executive' => '💼 ผู้บริหาร']],
-            'school_id' => ['label' => 'โรงเรียน', 'type' => 'school', 'required' => true],
+            'school_id' => ['label' => 'โรงเรียน', 'type' => 'school'], // forced from the session (apply_write_scope)
             'phone'     => ['label' => 'เบอร์โทรศัพท์', 'type' => 'phone', 'required' => true],
             'pin'       => ['label' => 'PIN 6 หลัก', 'type' => 'pin', 'required' => true],
         ]],
@@ -152,7 +152,7 @@ function mk_tables(): array
         // In-app notifications, one row per recipient user (core/notifications.php only — never the generic API).
         'userNotifications' => ['label' => 'แจ้งเตือน', 'level' => 'school', 'fields' => []],
         'cameras' => ['label' => 'กล้องวงจรปิด', 'level' => 'camera', 'fields' => [
-            'school_id'     => ['label' => 'โรงเรียน', 'type' => 'school'], // super admin picks; others forced from session
+            'school_id'     => ['label' => 'โรงเรียน', 'type' => 'school'], // forced from the session (apply_write_scope)
             'name'          => ['label' => 'ชื่อกล้อง', 'type' => 'text', 'required' => true, 'max' => 60, 'placeholder' => 'เช่น กล้องหน้าห้องอนุบาล 1'],
             'location'      => ['label' => 'ตำแหน่งติดตั้ง', 'type' => 'text', 'required' => true, 'max' => 80],
             'description'   => ['label' => 'รายละเอียด', 'type' => 'text', 'max' => 120],

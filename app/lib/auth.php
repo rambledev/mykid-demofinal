@@ -124,7 +124,6 @@ function current_user(): ?array
 
     $schoolName = $user['school']['shortName'] ?? '';
     [$user['scopeLabel'], $user['lockLabel']] = match ($user['role']) {
-        'super_admin' => ['ทุกโรงเรียน · ' . count(store_rows('schools')) . ' แห่ง', 'ทั้งระบบ'],
         'admin'       => [$user['school']['name'], 'เฉพาะโรงเรียนนี้'],
         'executive'   => [$user['school']['name'], 'อ่านอย่างเดียว'],
         'teacher'     => [$user['classroom']['name'] . (pkg()['multiSchool'] ? ' · ' . $schoolName : ''), 'เฉพาะห้องนี้'],

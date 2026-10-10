@@ -1,6 +1,6 @@
 <?php
 /**
- * Core layout — page header/footer, sidebar (Admin / Executive / Super Admin on desktop)
+ * Core layout — page header/footer, sidebar (Admin / Executive on desktop)
  * and bottom navigation (mobile, and Teacher / Parent everywhere).
  *
  * Stylesheets: assets/css/base.css is the base design language, core.css adds the

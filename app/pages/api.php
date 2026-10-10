@@ -202,6 +202,9 @@ try {
                 if ($id) {
                     $target = find_row('users', $id);
                     authorize(in_array($target['role'] ?? '', ['admin', 'executive'], true), 'แก้ไขได้เฉพาะบัญชีผู้ดูแลโรงเรียนและผู้บริหาร', ['id' => $id]);
+                    if ($id === $user['id'] && ($data['role'] ?? $target['role']) !== $target['role']) {
+                        throw new DemoValidationException('ไม่สามารถเปลี่ยนบทบาทของบัญชีที่กำลังใช้งานอยู่');
+                    }
                 }
                 foreach (store_rows('users') as $u) {
                     if ($u['phone'] === ($data['phone'] ?? null) && $u['id'] !== $id) {
@@ -290,6 +293,7 @@ try {
             if ($table === 'users' && $id === $user['id']) {
                 throw new DemoValidationException('ไม่สามารถลบบัญชีที่กำลังใช้งานอยู่');
             }
+            authorize($table !== 'users' || in_array($existing['role'], ['admin', 'executive'], true), 'ลบได้เฉพาะบัญชีผู้ดูแลโรงเรียนและผู้บริหาร', ['id' => $id]);
             store_delete($table, $id, fn ($old) => authorize(row_in_scope($user, $table, $old), 'ไม่มีสิทธิ์ลบข้อมูลนี้'));
             if ($table === 'cameras') {
                 store_mutate(function (array &$state) use ($id) {
@@ -429,7 +433,7 @@ try {
 
         case 'reset_demo':
             authorize(demo_mode(), 'ไม่สามารถดำเนินการได้', ['reason' => 'DEMO_MODE off']); // never wipes real data
-            authorize(in_array($user['role'], ['super_admin', 'admin', 'teacher'], true), 'บัญชีนี้ไม่มีสิทธิ์รีเซ็ตข้อมูล', ['role' => $user['role']]);
+            authorize(in_array($user['role'], ['admin', 'teacher'], true), 'บัญชีนี้ไม่มีสิทธิ์รีเซ็ตข้อมูล', ['role' => $user['role']]);
             store_reset_scope(function (string $table, array $row) use ($user) {
                 if ($user['role'] === 'teacher' && !can_write_table($user, $table)) {
                     return false;

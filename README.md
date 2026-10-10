@@ -1,6 +1,7 @@
 # mykid-demofinal
 
 Mykid — a school ↔ parent communication system for one school: ศูนย์พัฒนาเด็กเล็กบ้านโพนสูง (ศพด.บ้านโพนสูง).
+Roles: **School Admin · Executive · Teacher · Parent** (no platform-level Super Admin — one school only).
 It started as a copy of **Mykid Final Demo v1.0** and is being developed further as the real system (ADR-020, ADR-021 in
 `docs/production/decision-log.md`).
 
@@ -62,7 +63,7 @@ app/
   lib/                  engine: db · store · security · id-token · router · auth · permissions ·
                         data-filter · components · layout · media · cctv · pickup · notifications · ...
   pages/                one file per screen: home, login, logout, api, media, healthz,
-                        admin/ executive/ parent/ super-admin/ teacher/ common/
+                        admin/ executive/ parent/ teacher/ common/
 database/
   schema.sql            27 app tables + app_meta + login_attempts
   install.php           CLI: create tables / --reset
@@ -86,8 +87,8 @@ docs/                   security.md, production/ (architecture docs, decision lo
 |---|---|
 | `/` | role selection |
 | `/login`, `POST /logout` | sign in / out |
-| `/{section}` and `/{section}/{page}` | role pages — section = `super-admin`, `admin`, `executive`, `teacher`, `parent` |
-| `/super-admin/school/{token}`, `/super-admin/cctv/{token}` | one school (token = school id token) |
+| `/{section}` and `/{section}/{page}` | role pages — section = `admin`, `executive`, `teacher`, `parent` |
+| `/admin/users` | Admin / Executive accounts of the school (create, edit, delete — never your own role/account) |
 | `/media/{token}` | an uploaded image (permission-checked) |
 | `POST /api` | JSON actions (save, delete, set_status, pickup_*, ...) |
 | `/healthz` | container health check |

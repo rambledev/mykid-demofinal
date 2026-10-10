@@ -2,6 +2,7 @@
 
 รูปแบบ: Context → Decision → Alternatives → Consequences · สถานะ: `Locked` (ยืนยันโดยเจ้าของโครงการ), `Accepted` (ตาม stack/ข้อกำหนดที่ล็อก), `Proposed` (ข้อเสนอเชิงเทคนิค รอทีมตรวจ)
 
+> Revision 0.6 (2026-10-10): **ADR-022** — ตัด role Super Admin (โรงเรียนเดียว)
 > Revision 0.5 (2026-10-10): **ADR-021** — public/ web root + router + Clean URL, Secure ID Token, security baseline ([../security.md](../security.md))
 > Revision 0.4 (2026-10-10): **ADR-020** — พัฒนาต่อจากโปรเจกต์นี้ (`mykid-demofinal`) ด้วย PHP ธรรมดา + MariaDB → ADR-001, ADR-002, ADR-014 เป็น `Superseded`
 > Revision 0.3 (2026-10-07, Phase 0.5): ADR-008/009/010/012/013/015 → Accepted/Locked, ADR-014 Locked (repo ใหม่), ADR-017 Accepted (Custom AuthService), ADR-018 (multi-role credential), ADR-019 (FK RESTRICT)
@@ -168,6 +169,12 @@
   - Security baseline ตาม OWASP ASVS L1: PIN hash (Argon2id), login throttling, session hardening, CSRF ทุก state change, CSP + security headers, error ไม่แสดงรายละเอียดเทคนิค — รายละเอียดใน [docs/security.md](../security.md)
   - `DEMO_MODE` แยกพฤติกรรมทดลอง (เข้าระบบด้วยการ์ด, ข้อมูลสุ่มรายวัน, รีเซ็ต Demo) ออกจากการใช้งานจริง
 - **Consequences**: ลิงก์ต้องสร้างด้วย `url()` / `rurl()` และ id ต้องผ่าน `tok()` / `public_row()` เสมอ; เปลี่ยน `APP_KEY` = token เดิมใช้ไม่ได้ (ข้อมูลไม่กระทบ)
+
+### ADR-022 — ตัด role Super Admin · `Locked` (2026-10-10)
+- **Context**: ระบบใช้กับโรงเรียนเดียว (ศพด.บ้านโพนสูง) จึงไม่มีผู้ดูแลระดับแพลตฟอร์ม
+- **Decision**: role เหลือ Admin · Executive · Teacher · Parent; `multiSchool = false`; หน้า `/super-admin/*` และ scope `platform` ถูกลบ;
+  การจัดการบัญชี Admin / ผู้บริหารย้ายมาที่ `/admin/users` (Admin ของโรงเรียน — แก้/ลบได้เฉพาะบัญชี admin/executive, ห้ามลบหรือเปลี่ยนบทบาทบัญชีตัวเอง)
+- **Consequences**: การเพิ่มโรงเรียนใหม่ทำผ่านฐานข้อมูล/seed เท่านั้น; ข้อมูล schema ยังมี `school_id` ทุกตารางจึงขยายเป็นหลายโรงเรียนได้ภายหลัง
 
 ## Locked Decisions (สรุป)
 **PHP 8.3+ (ไม่ใช้ framework) · MariaDB 11.4 LTS ตาม ADR-020** · Docker + Coolify · Server-rendered HTML + Vanilla JS · Asia/Bangkok ·

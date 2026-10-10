@@ -17,7 +17,6 @@ function pkg_seed(): array
     };
 
     $users = [
-        $staff('ผู้ดูแลระบบ Mykid', '0900000001', 'super_admin', null),
         $staff('คุณแอดมินโพนสูง', '0900000002', 'admin', 1),
         $staff('ผู้อำนวยการโพนสูง', '0900000003', 'executive', 1),
     ];

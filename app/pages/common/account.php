@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 $user = current_user();
 $summary = permission_summary($user);
-$canReset = demo_mode() && in_array($user['role'], ['super_admin', 'admin', 'teacher'], true);
+$canReset = demo_mode() && in_array($user['role'], ['admin', 'teacher'], true);
 
 mk_header(['id' => $user['role'] . '-account', 'title' => 'บัญชี', 'nav' => 'account']);
 ?>
@@ -28,14 +28,12 @@ mk_header(['id' => $user['role'] . '-account', 'title' => 'บัญชี', 'na
         <li><span>👤 บทบาท</span><strong><?= e($user['meta']['th']) ?></strong></li>
         <li><span>🏫 ขอบเขตข้อมูล</span><strong><?= e($summary['scope']) ?></strong></li>
         <li><span>✏️ จัดการได้</span><strong><?= e($summary['write']) ?></strong></li>
-        <?php if ($user['role'] !== 'super_admin'): ?>
-            <li><span>🚫 เข้าถึงไม่ได้</span><strong><?= e(match ($user['role']) {
-                'admin', 'executive' => 'โรงเรียนอื่นทั้งหมด',
-                'teacher' => 'ห้องอื่นและโรงเรียนอื่น',
+        <li><span>🚫 เข้าถึงไม่ได้</span><strong><?= e(match ($user['role']) {
+                'admin', 'executive' => 'ข้อมูลนอกโรงเรียน',
+                'teacher' => 'ห้องเรียนอื่น',
                 'parent' => 'ข้อมูลของเด็กคนอื่น',
                 default => '-',
             }) ?></strong></li>
-        <?php endif; ?>
     </ul>
 </section>
 

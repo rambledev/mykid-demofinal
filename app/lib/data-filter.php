@@ -201,7 +201,7 @@ function student_thread(int $studentId): array
 }
 
 /* ---------------------------------------------------------------------------
- * Aggregations for Admin / Executive / Super Admin (all from scoped rows)
+ * Aggregations for Admin / Executive (all from scoped rows)
  * ------------------------------------------------------------------------ */
 
 function kpis(): array

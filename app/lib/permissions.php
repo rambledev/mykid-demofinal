@@ -42,13 +42,9 @@ function is_read_only(array $user): bool
 function row_in_scope(array $user, string $table, array $row): bool
 {
     $scope = role_rules($user['role'])['scope'];
-    if ($scope === 'platform') {
-        return true;
-    }
-
     $level = table_def($table)['level'];
 
-    // 1. SCHOOL SCOPE — every non-platform user is locked to their own school.
+    // 1. SCHOOL SCOPE — every user is locked to their own school.
     $rowSchool = $level === 'school_self' ? ($row['id'] ?? null) : ($row['school_id'] ?? null);
     if ($rowSchool !== $user['school_id']) {
         return false;
@@ -96,15 +92,9 @@ function apply_write_scope(array $user, string $table, array $data): array
     $scope = role_rules($user['role'])['scope'];
     $ctx = ['user' => $user['id'], 'role' => $user['role'], 'table' => $table];
 
-    // SCHOOL — forced from the session (super admin picks a real school for school-bound rows).
+    // SCHOOL — always forced from the session.
     if ($level !== 'school_self') {
-        if ($scope === 'platform') {
-            $schoolId = (int) ($data['school_id'] ?? 0);
-            authorize(find_row('schools', $schoolId) !== null, 'กรุณาเลือกโรงเรียน', $ctx);
-            $data['school_id'] = $schoolId;
-        } else {
-            $data['school_id'] = $user['school_id'];
-        }
+        $data['school_id'] = $user['school_id'];
     }
 
     // CLASSROOM
@@ -157,7 +147,6 @@ function permission_summary(array $user): array
     $labels = fn (array $tables) => array_map(fn ($t) => table_def($t)['label'], $tables);
     return [
         'scope' => match ($rules['scope']) {
-            'platform'  => 'ทุกโรงเรียนในระบบ',
             'school'    => 'ทั้งโรงเรียน' . ($user['school']['name'] ?? ''),
             'classroom' => 'ห้อง' . ($user['classroom']['name'] ?? '') . ' เท่านั้น',
             'student'   => 'ข้อมูลของ' . ($user['child']['nickname'] ?? '') . ' เท่านั้น',

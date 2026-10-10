@@ -18,20 +18,8 @@ return [
         ['POST',     '/api',           'api',     ['json' => true]],
         ['GET',      '/media/{token}', 'media'],
         ['GET',      '/healthz',       'healthz', ['stateless' => true]],
-        ['GET',      '/super-admin/school/{school}', 'super-admin/school', ['role' => 'super_admin']],
-        ['GET',      '/super-admin/cctv/{school}',   'common/cctv',        ['role' => 'super_admin']],
     ],
     'sections' => [
-        'super-admin' => ['role' => 'super_admin', 'pages' => [
-            'account' => 'common/account',
-            'cctv'    => 'common/cctv',
-            'compare' => 'super-admin/compare',
-            'index'   => 'super-admin/index',
-            'menu'    => 'common/menu',
-            'school'  => 'super-admin/school',
-            'schools' => 'super-admin/schools',
-            'users'   => 'super-admin/users',
-        ]],
         'admin' => ['role' => 'admin', 'pages' => [
             'account'    => 'common/account',
             'activities' => 'admin/activities',
@@ -48,6 +36,7 @@ return [
             'storage'    => 'admin/storage',
             'students'   => 'admin/students',
             'teachers'   => 'admin/teachers',
+            'users'      => 'admin/users',
         ]],
         'executive' => ['role' => 'executive', 'pages' => [
             'account'   => 'common/account',

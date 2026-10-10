@@ -2,31 +2,28 @@
 /**
  * CCTV dashboard — every role, every package with the "cctv" module.
  *
- * Cameras come ONLY from accessible_cameras() (core/cctv.php): role + school + classroom /
+ * Cameras come ONLY from accessible_cameras() (app/lib/cctv.php): role + school + classroom /
  * child + cameraPermissions, all from the session. The page never prints a stream URL;
  * each player asks the API ("camera_stream") which re-checks permission per camera.
- * Admin / Super Admin also get the "จัดการกล้อง" tab (camera configuration).
+ * Admin also gets the "จัดการกล้อง" tab (camera configuration).
  */
 declare(strict_types=1);
 
 $user = current_user();
 $cameras = accessible_cameras($user);
 $manage = can_manage_cameras($user);
-$isSuper = $user['role'] === 'super_admin';
-$schools = $isSuper ? scoped('schools') : [];
 
 $scopeNote = match ($user['role']) {
-    'super_admin' => 'แสดงกล้องของทุกโรงเรียน · เลือกโรงเรียนเพื่อกรอง',
     'admin'       => 'แสดงกล้องทั้งหมดของโรงเรียน · จัดการการตั้งค่าได้ในแท็บ “จัดการกล้อง”',
     'executive'   => 'แสดงกล้องทั้งหมดของโรงเรียน · อ่านอย่างเดียว ไม่สามารถแก้ไขการตั้งค่า',
     'teacher'     => 'แสดงกล้องห้อง' . $user['classroom']['name'] . ' และพื้นที่ส่วนกลางที่โรงเรียนอนุญาต',
     'parent'      => 'แสดงเฉพาะกล้องที่เกี่ยวข้องกับ' . $user['child']['nickname'] . ' และพื้นที่ส่วนกลางที่โรงเรียนอนุญาต',
 };
-$actions = $manage ? btn_add('cameras', 'เพิ่มกล้อง', $isSuper ? [] : ['stream_type' => 'mock', 'status' => 'online', 'is_active' => '1', 'allow_teacher' => '1', 'allow_parent' => '0', 'camera_model' => 'Tapo C200C'])
+$actions = $manage ? btn_add('cameras', 'เพิ่มกล้อง', ['stream_type' => 'mock', 'status' => 'online', 'is_active' => '1', 'allow_teacher' => '1', 'allow_parent' => '0', 'camera_model' => 'Tapo C200C'])
     : ($user['role'] === 'executive' ? '<span class="readonly-badge">👁️ อ่านอย่างเดียว</span>' : '');
 
-mk_header(['id' => $user['role'] . '-cctv', 'title' => $isSuper ? 'CCTV Management' : 'กล้องวงจรปิด', 'nav' => 'cctv']);
-page_title('📹', $isSuper ? 'CCTV Management' : 'กล้องวงจรปิด', $user['school']['name'] ?? 'ทุกโรงเรียน · ' . count($schools) . ' แห่ง', $actions);
+mk_header(['id' => $user['role'] . '-cctv', 'title' => 'กล้องวงจรปิด', 'nav' => 'cctv']);
+page_title('📹', 'กล้องวงจรปิด', $user['school']['name'] ?? '', $actions);
 if ($manage) {
     tab_bar('cctv', ['live' => '📺 ดูกล้อง', 'manage' => '⚙️ จัดการกล้อง']);
 }
@@ -35,17 +32,9 @@ if ($manage) {
     <section class="cctv-live" data-tab-panel="cctv:live">
         <?php render_cctv_summary($cameras); ?>
         <p class="hint hint--card">🔒 <?= e($scopeNote) ?> · ดูแบบ Realtime เท่านั้น ไม่มีการบันทึกหรือดาวน์โหลดภาพ</p>
-        <?php if ($isSuper): ?>
-            <?php
-            // /super-admin/cctv/{school token} only pre-selects the client-side filter (Super Admin sees every school anyway).
-            $viewId = untok('schools', route_param('school'));
-            $view = in_array($viewId, array_column($schools, 'id'), true) ? tok('schools', $viewId) : '';
-            filter_bar('cctv', array_column(array_map(fn ($s) => ['k' => tok('schools', $s['id']), 'v' => $s['emoji'] . ' ' . $s['shortName']], $schools), 'v', 'k'), 'ค้นหากล้อง เช่น CAM-01 หรือ สนามเด็กเล่น', 'group', $view);
-            ?>
-        <?php endif; ?>
         <?php if ($cameras): ?>
             <div class="cctv-grid" data-filter-list="cctv">
-                <?php foreach ($cameras as $camera): ?><?php render_cctv_card($camera, $isSuper); ?><?php endforeach; ?>
+                <?php foreach ($cameras as $camera): ?><?php render_cctv_card($camera); ?><?php endforeach; ?>
             </div>
         <?php else: ?>
             <?= empty_state('📹', 'ยังไม่มีกล้องที่บัญชีนี้ได้รับสิทธิ์ดู') ?>
@@ -58,7 +47,7 @@ if ($manage) {
             <div class="table-wrap">
                 <table class="table cctv-table">
                     <thead><tr>
-                        <th scope="col">กล้อง</th><?php if ($isSuper): ?><th scope="col">โรงเรียน</th><?php endif; ?>
+                        <th scope="col">กล้อง</th>
                         <th scope="col">พื้นที่</th><th scope="col">สถานะ</th><th scope="col">Stream</th><th scope="col">RTSP</th>
                         <th scope="col">การใช้งาน</th><th scope="col"><span class="visually-hidden">จัดการ</span></th>
                     </tr></thead>
@@ -67,7 +56,6 @@ if ($manage) {
                         <?php $pub = camera_public($camera); $active = !empty($camera['is_active']); ?>
                         <tr>
                             <th scope="row"><strong><?= e($camera['code']) ?></strong><br><small><?= e($camera['name']) ?> · <?= e($camera['location']) ?></small></th>
-                            <?php if ($isSuper): ?><td><?= e(find_row('schools', $camera['school_id'])['shortName'] ?? '') ?></td><?php endif; ?>
                             <td><?= e($pub['area']) ?></td>
                             <td><?= camera_status_badge(['is_active' => true] + $camera) ?></td>
                             <td><?= e($pub['streamLabel']) ?><?= $camera['stream_url'] ? '' : '<br><small>ยังไม่ตั้งค่า URL</small>' ?></td>
@@ -92,6 +80,6 @@ if ($manage) {
 </div>
 <?php
 if ($manage) {
-    render_form_sheet('cameras', 'เพิ่มกล้อง', $isSuper ? [] : ['school_id']);
+    render_form_sheet('cameras', 'เพิ่มกล้อง', ['school_id']);
 }
 mk_footer();

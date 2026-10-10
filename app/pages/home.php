@@ -12,7 +12,6 @@ $current = current_user();
 $schools = array_column(store_rows('schools'), null, 'id');
 
 $roles = [
-    'super_admin' => ['title' => 'Super Admin', 'desc' => 'จัดการระบบและข้อมูลทุกโรงเรียน'],
     'admin'       => ['title' => 'School Admin', 'desc' => 'จัดการข้อมูลภายในโรงเรียน'],
     'executive'   => ['title' => 'Executive', 'desc' => 'ดูข้อมูลและรายงานภาพรวม'],
     'teacher'     => ['title' => 'Teacher', 'desc' => 'จัดการข้อมูลนักเรียนและกิจกรรมประจำวัน'],

@@ -1,10 +1,9 @@
 <?php
 /**
- * Package A — permission matrix: ROLE → SCOPE → tables it may READ / WRITE.
+ * Permission matrix: ROLE → SCOPE → tables it may READ / WRITE.
  *
  *   USER → ROLE → SCHOOL SCOPE → CLASSROOM SCOPE → STUDENT SCOPE → DATA
  *
- *   scope 'platform'  → every school (Super Admin)
  *   scope 'school'    → the user's school only (school_id from the session)
  *   scope 'classroom' → the user's school + classroom (Teacher)
  *   scope 'student'   → the user's school + child (Parent)
@@ -14,16 +13,12 @@ declare(strict_types=1);
 $studentDaily = ['attendance', 'healthRecords', 'sleepRecords', 'foodIntake', 'portfolio', 'photos', 'stars', 'development', 'pickups', 'mediaFiles', 'studentStatuses'];
 
 return [
-    'super_admin' => [
-        'scope' => 'platform',
-        'read'  => '*',
-        'write' => ['schools', 'users', 'cameras'],
-    ],
     'admin' => [
         'scope' => 'school',
         'read'  => '*',
         'write' => ['students', 'teachers', 'classrooms', 'activities', 'foodMenus', 'calendarEvents', 'attendance',
-            'healthRecords', 'portfolio', 'stars', 'notifications', 'settings', 'cameras', 'mediaFiles'],
+            'healthRecords', 'portfolio', 'stars', 'notifications', 'settings', 'cameras', 'mediaFiles',
+            'users'], // users: Admin / Executive accounts of the own school only (app/pages/api.php)
     ],
     'executive' => [
         'scope' => 'school',

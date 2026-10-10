@@ -243,11 +243,7 @@ function tab_bar(string $group, array $tabs): void
 
 function classroom_label(array $room): string
 {
-    $label = $room['emoji'] . ' ' . $room['name'];
-    if (pkg()['multiSchool'] && current_user()['role'] === 'super_admin') {
-        $label .= ' · ' . (find_row('schools', $room['school_id'])['shortName'] ?? '');
-    }
-    return $label;
+    return $room['emoji'] . ' ' . $room['name'];
 }
 
 /* ============================================================================
@@ -859,7 +855,7 @@ function render_cctv_summary(array $cameras): void
 }
 
 /** One camera tile with a live player slot. No stream URL is ever printed into the page. */
-function render_cctv_card(array $camera, bool $showSchool = false): void
+function render_cctv_card(array $camera): void
 {
     $pub = camera_public($camera);
     $json = json_attr($pub);
@@ -872,7 +868,7 @@ function render_cctv_card(array $camera, bool $showSchool = false): void
             <div class="cctv-card__title">
                 <strong>📹 <?= e($pub['name']) ?></strong>
                 <small><?= e($pub['code']) ?> · <?= e($pub['location']) ?></small>
-                <small><?= e($pub['area']) ?><?= $showSchool ? ' · ' . e($pub['school']) : '' ?></small>
+                <small><?= e($pub['area']) ?></small>
             </div>
             <div class="cctv-card__badges"><?= camera_status_badge($camera) ?></div>
         </div>

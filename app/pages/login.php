@@ -43,7 +43,6 @@ $accounts = [];
 foreach (demo_mode() ? store_rows('users') : [] as $u) {
     $school = $u['school_id'] ? find_row('schools', $u['school_id']) : null;
     $scope = match ($u['role']) {
-        'super_admin' => 'ทุกโรงเรียน',
         'admin', 'executive' => $school['name'] ?? '',
         'teacher' => 'ห้อง' . (find_row('classrooms', $u['classroom_id'])['name'] ?? ''),
         'parent'  => 'บุตร: ' . (find_row('students', $u['student_id'])['nickname'] ?? '') . ' · ' . (find_row('classrooms', $u['classroom_id'])['name'] ?? ''),

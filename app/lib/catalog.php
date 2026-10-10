@@ -18,7 +18,6 @@ function mk_catalog(): array
 
     $catalog = [
         'roles' => [
-            'super_admin' => ['label' => 'Super Admin', 'th' => 'ผู้ดูแลระบบกลาง', 'emoji' => '🪐', 'theme' => 'super', 'dir' => 'super-admin', 'layout' => 'console'],
             'admin'       => ['label' => 'Admin',       'th' => 'ผู้ดูแลโรงเรียน',  'emoji' => '🛡️', 'theme' => 'admin', 'dir' => 'admin', 'layout' => 'console'],
             'executive'   => ['label' => 'Executive',   'th' => 'ผู้บริหาร',        'emoji' => '💼', 'theme' => 'executive', 'dir' => 'executive', 'layout' => 'console'],
             'teacher'     => ['label' => 'Teacher',     'th' => 'ครู',             'emoji' => '👩‍🏫', 'theme' => 'teacher', 'dir' => 'teacher', 'layout' => 'app'],

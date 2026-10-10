@@ -6,29 +6,20 @@ declare(strict_types=1);
 
 return [
     'name'        => 'Mykid Full',
-    'roles'       => ['super_admin', 'admin', 'executive', 'teacher', 'parent'],
+    'roles'       => ['admin', 'executive', 'teacher', 'parent'],
     'session'     => 'MYKIDDFA', // mykid-demofinal: own cookie name — never share sessions with the original Final Demo
     'tier'        => 'full',
     'tierLabel'   => 'Full',
-    'multiSchool' => true,
+    'multiSchool' => false, // one school (ศพด.บ้านโพนสูง)
     'meals'       => ['breakfast', 'lunch', 'snack', 'milk', 'fruit'],
     'modules'     => [
         'students', 'teachers', 'classrooms', 'activities', 'food', 'status', 'reports', 'attendanceReport',
-        'multiSchool', 'attendance', 'health', 'sleep', 'foodIntake', 'portfolio', 'photos', 'stars',
+        'attendance', 'health', 'sleep', 'foodIntake', 'portfolio', 'photos', 'stars',
         'development', 'calendar', 'chat', 'notifications', 'pickup', 'cctv', 'settings', 'timeline', 'media', 'studentStatus', 'inAppNotifications',
     ],
 
     // Navigation per role: [key, label, page, icon, show in mobile bottom nav]
     'nav' => [
-        'super_admin' => [
-            ['home', 'ภาพรวม', 'super-admin/index.php', 'home', true],
-            ['schools', 'โรงเรียน', 'super-admin/schools.php', 'school', true],
-            ['school', 'ดูรายโรงเรียน', 'super-admin/school.php', 'list', false],
-            ['compare', 'เปรียบเทียบ', 'super-admin/compare.php', 'chart', true],
-            ['users', 'ผู้ดูแลโรงเรียน', 'super-admin/users.php', 'users', false],
-            ['cctv', 'CCTV Management', 'super-admin/cctv.php', 'camera', true],
-            ['account', 'บัญชี', 'super-admin/account.php', 'user', false],
-        ],
         'admin' => [
             ['home', 'หน้าหลัก', 'admin/index.php', 'home', true],
             ['students', 'นักเรียน', 'admin/students.php', 'child', true],
@@ -42,6 +33,7 @@ return [
             ['stars', 'ดาวสะสม', 'admin/stars.php', 'star', false],
             ['cctv', 'กล้องวงจรปิด', 'admin/cctv.php', 'camera', false],
             ['storage', 'จัดการพื้นที่จัดเก็บ', 'admin/storage.php', 'image', false],
+            ['users', 'ผู้ดูแลและผู้บริหาร', 'admin/users.php', 'users', false],
             ['settings', 'ตั้งค่าโรงเรียน', 'admin/settings.php', 'settings', false],
             ['account', 'บัญชี', 'admin/account.php', 'user', false],
         ],
