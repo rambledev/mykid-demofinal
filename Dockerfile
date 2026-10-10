@@ -29,12 +29,13 @@ RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" \
         echo 'memory_limit = 256M'; \
     } > "$PHP_INI_DIR/conf.d/zz-mykid.ini"
 
-# Apache: serve /var/www/html, block internal folders, no rewrite rules needed.
+# Apache: web root = public/ (front controller + assets only); app/, database/, storage/ stay private.
 COPY docker/apache/mykid.conf /etc/apache2/conf-available/mykid.conf
-RUN a2enmod headers \
+RUN sed -ri 's!DocumentRoot /var/www/html!DocumentRoot /var/www/html/public!' /etc/apache2/sites-available/000-default.conf \
+    && a2enmod headers \
     && a2enconf mykid
 
-# Application code (read-only for Apache) + writable demo storage.
+# Application code (read-only for Apache) + writable storage (uploaded images).
 COPY . /var/www/html/
 RUN mkdir -p /var/www/html/storage \
     && chown -R root:root /var/www/html \
@@ -45,11 +46,14 @@ RUN mkdir -p /var/www/html/storage \
 
 # App mode: "production" turns off developer logs (PHP error_log + browser console).
 # Override in Coolify with MYKID_ENV=development when debugging.
-ENV MYKID_ENV=production
+# Required in Coolify: DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASS, APP_KEY (32+ random chars).
+# DEMO_MODE=1 enables the one-tap demo accounts (testing only).
+ENV MYKID_ENV=production \
+    DEMO_MODE=0
 
 EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD curl -fsS http://localhost/healthz.php > /dev/null || exit 1
+    CMD curl -fsS http://localhost/healthz > /dev/null || exit 1
 
 # Base image already runs: apache2-foreground

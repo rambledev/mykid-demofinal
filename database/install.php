@@ -15,8 +15,7 @@ if (PHP_SAPI !== 'cli') {
 }
 
 $root = dirname(__DIR__);
-$_SERVER['SCRIPT_FILENAME'] = $root . '/index.php';
-require $root . '/includes/bootstrap.php';
+require $root . '/app/bootstrap.php';
 
 echo "[Install] START\n";
 $pdo = mk_db(); // creates missing tables

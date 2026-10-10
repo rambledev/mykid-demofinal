@@ -416,3 +416,16 @@ CREATE TABLE IF NOT EXISTS media_files (
     KEY idx_owner (owner_type, owner_id),
     KEY idx_school (school_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------- Security
+
+-- Login throttling (app/lib/security.php): failed attempts per phone / IP inside a 15-minute window.
+CREATE TABLE IF NOT EXISTS login_attempts (
+    id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    phone        VARCHAR(20)  NOT NULL,
+    ip           VARCHAR(45)  NOT NULL,
+    success      TINYINT(1)   NOT NULL DEFAULT 0,
+    attempted_at DATETIME     NOT NULL,
+    KEY idx_phone_time (phone, attempted_at),
+    KEY idx_ip_time (ip, attempted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
