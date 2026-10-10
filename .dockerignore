@@ -1,0 +1,25 @@
+# Version control & editor files
+.git
+.gitignore
+.idea
+.vscode
+.DS_Store
+**/.DS_Store
+Thumbs.db
+
+# Docker build files (not needed inside the image)
+Dockerfile
+.dockerignore
+
+# Secrets / local env — configure in Coolify instead
+.env
+.env.*
+
+# Not used by the PHP app
+node_modules
+**/node_modules
+docs
+*.md
+
+# Runtime demo data (recreated automatically inside the container)
+**/storage/uploads

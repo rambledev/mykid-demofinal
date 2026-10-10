@@ -1,0 +1,25 @@
+/* ==========================================================================
+   Package A — Mykid Full: "Premium + Professional" accents on top of core.css
+   ========================================================================== */
+.tier-full .stat-card,
+.tier-full .status-card,
+.tier-full .room-card {
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  box-shadow: 0 0 0 1px rgba(160, 138, 247, .18), var(--shadow);
+}
+.tier-full .stat-card::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: linear-gradient(90deg, #A08AF7, #FF8DB5, #FFC94D);
+  opacity: .7;
+}
+.tier-full .sidebar__brand strong {
+  background: linear-gradient(90deg, #6D50D6, #E9568B);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
