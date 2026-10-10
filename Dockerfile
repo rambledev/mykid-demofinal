@@ -42,18 +42,25 @@ RUN mkdir -p /var/www/html/storage \
     && find /var/www/html -type d -exec chmod 755 {} + \
     && find /var/www/html -type f -exec chmod 644 {} + \
     && chown -R www-data:www-data /var/www/html/storage \
-    && chmod 775 /var/www/html/storage
+    && chmod 775 /var/www/html/storage \
+    && chmod 755 /var/www/html/docker/entrypoint.sh
+
+# A mounted storage volume may arrive root-owned: the entrypoint fixes ownership on every start.
+ENTRYPOINT ["/var/www/html/docker/entrypoint.sh"]
+CMD ["apache2-foreground"]
 
 # App mode: "production" turns off developer logs (PHP error_log + browser console).
 # Override in Coolify with MYKID_ENV=development when debugging.
 # Required in Coolify: DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASS, APP_KEY (32+ random chars).
 # DEMO_MODE=1 enables the one-tap demo accounts (testing only).
+# TRUST_PROXY=1: the app runs behind Coolify's Traefik, so the client IP (login throttling) is read
+# from X-Forwarded-For. Set it to 0 if the container is ever exposed without a proxy.
 ENV MYKID_ENV=production \
-    DEMO_MODE=0
+    DEMO_MODE=0 \
+    TRUST_PROXY=1
 
 EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -fsS http://localhost/healthz > /dev/null || exit 1
 
-# Base image already runs: apache2-foreground

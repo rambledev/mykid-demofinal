@@ -107,5 +107,22 @@ Ids that go to the browser always use `tok($table, $id)` / `public_row($table, $
 
 ## Deploy (Docker / Coolify)
 
-Set env vars `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`, `APP_KEY` (32+ random characters) and keep
-`DEMO_MODE=0`; add a MariaDB 11.4 service and a volume on `/var/www/html/storage`. Health check: `GET /healthz`.
+- Application source: `rambledev/mykid-demofinal` (branch `main`) · Build Pack **Dockerfile** · port **80** ·
+  health check `GET /healthz`.
+- Persistent storage: a volume on `/var/www/html/storage` (uploaded images; the entrypoint makes it writable).
+- Environment variables of the application:
+
+```env
+MYKID_ENV=production
+DB_HOST=<MariaDB container name, from "MariaDB URL (internal)">
+DB_PORT=3306
+DB_NAME=default
+DB_USER=mariadb
+DB_PASS=<Normal User Password of the MariaDB resource>
+APP_KEY=<openssl rand -base64 48 — never change after go-live>
+DEMO_MODE=1   # 0 for real use
+```
+
+- The MariaDB resource stays private (no public port); the app reaches it over Coolify's internal network.
+  Tables are created and seeded on the first request. `TRUST_PROXY=1` (Dockerfile default) reads the client IP from
+  Traefik's `X-Forwarded-For` for login throttling.

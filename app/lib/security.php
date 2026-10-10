@@ -160,9 +160,20 @@ function pin_verify(string $pin, string $stored): bool
  * Login throttling (brute force protection)
  * ------------------------------------------------------------------------ */
 
+/**
+ * Client IP for login throttling. Behind a reverse proxy (Coolify / Traefik, TRUST_PROXY=1) the
+ * real address is the first entry of X-Forwarded-For; otherwise REMOTE_ADDR (never trusted headers).
+ */
 function client_ip(): string
 {
-    return substr((string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'), 0, 45);
+    $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
+    if (mk_env('TRUST_PROXY', '0') === '1' && !empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+        $first = trim(explode(',', (string) $_SERVER['HTTP_X_FORWARDED_FOR'])[0]);
+        if (filter_var($first, FILTER_VALIDATE_IP)) {
+            $ip = $first;
+        }
+    }
+    return substr($ip, 0, 45);
 }
 
 /** Seconds the caller must still wait (0 = may try). */
