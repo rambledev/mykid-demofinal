@@ -40,7 +40,8 @@ page_title('💼', 'ภาพรวมโรงเรียน', $user['school']
     <div class="dash-grid">
         <section class="card">
             <?php section_head('📈', 'อัตราการมาเรียน 5 วันล่าสุด', '', 'เปอร์เซ็นต์ของนักเรียนที่มาเรียน (รวมมาสาย)'); ?>
-            <?= chart_bars(attendance_trend(5, 'school' . $user['school_id']), '%', 100) ?>
+            <?php $trend = attendance_trend(5); ?>
+            <?= $trend ? chart_bars($trend, '%', 100) : empty_state('📊', 'ยังไม่มีข้อมูลการเช็คชื่อ') ?>
         </section>
         <section class="card">
             <?php section_head('🧒', 'นักเรียนแยกตามห้อง'); ?>

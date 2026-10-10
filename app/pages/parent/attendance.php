@@ -1,24 +1,21 @@
 <?php
-/** Parent (Package A) — the child's attendance today + this month (mock history). */
+/** Parent — the child's attendance today + this month (from the teacher's daily check). */
 declare(strict_types=1);
 
 $user = current_user();
 $child = $user['child'];
 $today = student_today('attendance', $child['id']);
 
-// Mock month history for the calendar view (today = real record).
+// This month's real records (a day without a check shows as empty).
+$byDate = array_column(rows_since(where(scoped('attendance'), 'student_id', $child['id']), date('Y-m-01')), 'status', 'date');
 $days = [];
 $counts = array_fill_keys(array_column(mk_catalog()['attendance'], 'code'), 0);
 for ($d = 1; $d <= (int) date('j'); $d++) {
     $date = date('Y-m-') . sprintf('%02d', $d);
-    $dow = (int) date('w', strtotime($date));
-    if ($dow === 0 || $dow === 6) {
-        $days[] = ['date' => $date, 'status' => null];
-        continue;
+    $status = ($byDate[$date] ?? '') !== '' ? $byDate[$date] : null;
+    if ($status !== null && isset($counts[$status])) {
+        $counts[$status]++;
     }
-    $r = mk_rand($child['id'], $date) % 100;
-    $status = $date === today() ? ($today['status'] ?? 'present') : ($r < 88 ? 'present' : ($r < 95 ? 'late' : 'leave'));
-    $counts[$status]++;
     $days[] = ['date' => $date, 'status' => $status];
 }
 
@@ -37,7 +34,7 @@ page_title('✅', 'การมาเรียน', $child['nickname'] . ' · ' 
         <ol class="month-grid" aria-label="การมาเรียนรายวัน">
             <?php foreach ($days as $day): ?>
                 <?php $item = cat_find('attendance', $day['status']); ?>
-                <li class="month-grid__day<?= $day['status'] ? ' tone--' . e($item['tone']) : ' is-weekend' ?>" title="<?= e(thai_short_date($day['date']) . ' ' . ($item['label'] ?? 'วันหยุด')) ?>">
+                <li class="month-grid__day<?= $day['status'] ? ' tone--' . e($item['tone']) : ' is-weekend' ?>" title="<?= e(thai_short_date($day['date']) . ' ' . ($item['label'] ?? 'ไม่มีข้อมูล')) ?>">
                     <span><?= (int) date('j', strtotime($day['date'])) ?></span><?= $item['emoji'] ?? '' ?>
                 </li>
             <?php endforeach; ?>

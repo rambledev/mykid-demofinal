@@ -26,7 +26,7 @@
 declare(strict_types=1);
 
 const STREAM_TYPES = [
-    'mock'   => 'Mock (Demo)',
+    'mock'   => 'ยังไม่เชื่อมต่อ (ยังไม่มี Stream URL)',
     'hls'    => 'HLS (.m3u8)',
     'webrtc' => 'WebRTC (WHEP)',
 ];
@@ -165,7 +165,7 @@ function camera_stream_descriptor(array $camera, array $user): array
     $expires = time() + STREAM_TOKEN_TTL;
     $token = hash_hmac('sha256', $camera['id'] . '|' . $user['id'] . '|' . $expires, csrf_token());
     $url = (string) ($camera['stream_url'] ?? '');
-    $type = $url === '' ? 'mock' : $camera['stream_type']; // no URL yet → demo player, never an error
+    $type = $url === '' ? 'mock' : $camera['stream_type']; // no URL yet → "not connected" placeholder, never an error
 
     if ($type === 'hls' && $url !== '') {
         $url .= (str_contains($url, '?') ? '&' : '?') . 'token=' . $token;

@@ -58,7 +58,7 @@ function validate_fields(string $table, array $data, bool $isNew): array
 
         if ($empty) {
             if (!empty($field['required']) && ($isNew || $present)) {
-                throw new DemoValidationException('กรุณากรอก “' . $field['label'] . '”');
+                throw new ValidationException('กรุณากรอก “' . $field['label'] . '”');
             }
             if ($present) {
                 $clean[$key] = in_array($field['type'], ['classroom', 'student', 'school', 'number'], true) ? null : '';
@@ -71,17 +71,17 @@ function validate_fields(string $table, array $data, bool $isNew): array
             'classroom', 'student', 'school' => untok_or_fail(['classroom' => 'classrooms', 'student' => 'students', 'school' => 'schools'][$field['type']], $value),
             'number' => (function () use ($value, $field) {
                 if (!is_numeric($value) || $value < ($field['min'] ?? PHP_INT_MIN) || $value > ($field['max'] ?? PHP_INT_MAX)) {
-                    throw new DemoValidationException('“' . $field['label'] . '” ต้องอยู่ระหว่าง ' . $field['min'] . '–' . $field['max']);
+                    throw new ValidationException('“' . $field['label'] . '” ต้องอยู่ระหว่าง ' . $field['min'] . '–' . $field['max']);
                 }
                 return str_contains((string) ($field['step'] ?? '1'), '.') ? round((float) $value, 1) : (int) $value;
             })(),
-            'time' => preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', (string) $value) ? $value : throw new DemoValidationException('กรุณาระบุเวลาให้ถูกต้อง'),
-            'date' => preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $value) ? $value : throw new DemoValidationException('กรุณาระบุวันที่ให้ถูกต้อง'),
-            'phone' => preg_match('/^0\d{9}$/', normalize_phone((string) $value)) ? normalize_phone((string) $value) : throw new DemoValidationException('กรุณากรอกเบอร์โทรศัพท์ 10 หลัก'),
-            'pin' => preg_match('/^\d{6}$/', (string) $value) ? (string) $value : throw new DemoValidationException('PIN ต้องเป็นตัวเลข 6 หลัก'),
-            'url' => preg_match('#^https?://[^\s@]+$#i', (string) $value) ? mb_substr((string) $value, 0, 300) : throw new DemoValidationException('“' . $field['label'] . '” ต้องเป็น URL แบบ https:// และห้ามมีรหัสผ่าน'),
+            'time' => preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', (string) $value) ? $value : throw new ValidationException('กรุณาระบุเวลาให้ถูกต้อง'),
+            'date' => preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $value) ? $value : throw new ValidationException('กรุณาระบุวันที่ให้ถูกต้อง'),
+            'phone' => preg_match('/^0\d{9}$/', normalize_phone((string) $value)) ? normalize_phone((string) $value) : throw new ValidationException('กรุณากรอกเบอร์โทรศัพท์ 10 หลัก'),
+            'pin' => preg_match('/^\d{6}$/', (string) $value) ? (string) $value : throw new ValidationException('PIN ต้องเป็นตัวเลข 6 หลัก'),
+            'url' => preg_match('#^https?://[^\s@]+$#i', (string) $value) ? mb_substr((string) $value, 0, 300) : throw new ValidationException('“' . $field['label'] . '” ต้องเป็น URL แบบ https:// และห้ามมีรหัสผ่าน'),
             'secret' => mb_substr((string) $value, 0, 300),
-            'select' => array_key_exists((string) $value, field_options($field)) ? (string) $value : throw new DemoValidationException('กรุณาเลือก “' . $field['label'] . '” จากรายการ'),
+            'select' => array_key_exists((string) $value, field_options($field)) ? (string) $value : throw new ValidationException('กรุณาเลือก “' . $field['label'] . '” จากรายการ'),
             'emoji' => in_array($value, mk_catalog()[$field['options']], true) ? $value : '⭐',
             default => mb_substr((string) $value, 0, (int) ($field['max'] ?? 200)),
         };
@@ -133,16 +133,16 @@ function prepare_camera_data(array $data): array
         if ($data['rtsp_url'] === '') {
             unset($data['rtsp_url']); // empty = keep the stored value (never echoed back to the browser)
         } elseif (!preg_match('#^rtsps?://[^\s]+$#i', $data['rtsp_url'])) {
-            throw new DemoValidationException('RTSP URL ต้องขึ้นต้นด้วย rtsp://');
+            throw new ValidationException('RTSP URL ต้องขึ้นต้นด้วย rtsp://');
         } elseif (preg_match('#^rtsps?://[^/]*@#i', $data['rtsp_url'])) { // user:pass@host
-            throw new DemoValidationException('ห้ามใส่ Username/Password ใน RTSP URL — ให้ตั้งค่า Credential ที่ Media Server');
+            throw new ValidationException('ห้ามใส่ Username/Password ใน RTSP URL — ให้ตั้งค่า Credential ที่ Media Server');
         }
     }
     if (isset($data['is_active'])) {
         $data['is_active'] = $data['is_active'] === '1';
     }
     if (($data['stream_type'] ?? '') === 'hls' && !empty($data['stream_url']) && !str_contains($data['stream_url'], '.m3u8')) {
-        throw new DemoValidationException('HLS Stream URL ต้องเป็นไฟล์ .m3u8 จาก Media Server');
+        throw new ValidationException('HLS Stream URL ต้องเป็นไฟล์ .m3u8 จาก Media Server');
     }
     return [$data, $flags];
 }
@@ -186,7 +186,7 @@ try {
             }
             if ($table === 'portfolio' && ($pending = uploaded_files())) {
                 if (count($pending) > MEDIA_MAX_FILES) {
-                    throw new DemoValidationException('อัปโหลดได้ครั้งละไม่เกิน ' . MEDIA_MAX_FILES . ' รูป');
+                    throw new ValidationException('อัปโหลดได้ครั้งละไม่เกิน ' . MEDIA_MAX_FILES . ' รูป');
                 }
                 array_map('validate_image_upload', $pending); // reject bad files BEFORE saving the work
             }
@@ -204,7 +204,7 @@ try {
                 if ($recipient === 'parent') {
                     $parents = $studentId ? student_parent_ids((int) $studentId) : [];
                     if (!$parents) {
-                        throw new DemoValidationException('นักเรียนคนนี้ยังไม่มีบัญชีผู้ปกครองในระบบ');
+                        throw new ValidationException('นักเรียนคนนี้ยังไม่มีบัญชีผู้ปกครองในระบบ');
                     }
                     $data['parent_id'] = $parents[0];
                 }
@@ -217,12 +217,12 @@ try {
                     $target = find_row('users', $id);
                     authorize(in_array($target['role'] ?? '', ['admin', 'executive'], true), 'แก้ไขได้เฉพาะบัญชีผู้ดูแลโรงเรียนและผู้บริหาร', ['id' => $id]);
                     if ($id === $user['id'] && ($data['role'] ?? $target['role']) !== $target['role']) {
-                        throw new DemoValidationException('ไม่สามารถเปลี่ยนบทบาทของบัญชีที่กำลังใช้งานอยู่');
+                        throw new ValidationException('ไม่สามารถเปลี่ยนบทบาทของบัญชีที่กำลังใช้งานอยู่');
                     }
                 }
                 foreach (store_rows('users') as $u) {
                     if ($u['phone'] === ($data['phone'] ?? null) && $u['id'] !== $id) {
-                        throw new DemoValidationException('เบอร์โทรศัพท์นี้มีผู้ใช้งานแล้ว');
+                        throw new ValidationException('เบอร์โทรศัพท์นี้มีผู้ใช้งานแล้ว');
                     }
                 }
             }
@@ -273,11 +273,11 @@ try {
                 'ไม่มีสิทธิ์อัปโหลดรูปภาพให้รายการนี้', ['user' => $user['id'], 'owner' => $ownerType, 'owner_id' => $input['owner_id'] ?? null]);
             $files = uploaded_files();
             if (!$files) {
-                throw new DemoValidationException('กรุณาเลือกรูปภาพอย่างน้อย 1 รูป');
+                throw new ValidationException('กรุณาเลือกรูปภาพอย่างน้อย 1 รูป');
             }
             $meal = $ownerType === 'food' && ($input['meal'] ?? '') !== '' ? (string) $input['meal'] : null;
             if ($meal !== null && !cat_find('meals', $meal)) {
-                throw new DemoValidationException('ไม่พบมื้ออาหารนี้');
+                throw new ValidationException('ไม่พบมื้ออาหารนี้');
             }
             $ids = attach_uploaded_images($ownerType, $owner, $user, $files, $meal);
             $message = 'อัปโหลดรูปภาพ ' . count($ids) . ' รูปเรียบร้อยแล้ว';
@@ -299,13 +299,13 @@ try {
             $existing = find_row($table, $id);
             authorize($existing !== null && row_in_scope($user, $table, $existing), 'ไม่มีสิทธิ์ลบข้อมูลนอกขอบเขตของบัญชีนี้', ['table' => $table, 'id' => $id]);
             if ($table === 'classrooms' && where(store_rows('students'), 'classroom_id', $id)) {
-                throw new DemoValidationException('ห้องนี้ยังมีนักเรียนอยู่ กรุณาย้ายนักเรียนออกก่อน');
+                throw new ValidationException('ห้องนี้ยังมีนักเรียนอยู่ กรุณาย้ายนักเรียนออกก่อน');
             }
             if ($table === 'schools' && where(store_rows('students'), 'school_id', $id)) {
-                throw new DemoValidationException('โรงเรียนนี้ยังมีข้อมูลนักเรียนอยู่ จึงยังลบไม่ได้');
+                throw new ValidationException('โรงเรียนนี้ยังมีข้อมูลนักเรียนอยู่ จึงยังลบไม่ได้');
             }
             if ($table === 'users' && $id === $user['id']) {
-                throw new DemoValidationException('ไม่สามารถลบบัญชีที่กำลังใช้งานอยู่');
+                throw new ValidationException('ไม่สามารถลบบัญชีที่กำลังใช้งานอยู่');
             }
             authorize($table !== 'users' || in_array($existing['role'], ['admin', 'executive'], true), 'ลบได้เฉพาะบัญชีผู้ดูแลโรงเรียนและผู้บริหาร', ['id' => $id]);
             store_delete($table, $id, fn ($old) => authorize(row_in_scope($user, $table, $old), 'ไม่มีสิทธิ์ลบข้อมูลนี้'));
@@ -321,7 +321,7 @@ try {
             // Playback descriptor for ONE camera — re-checks role + school + classroom + camera permission.
             $camera = authorized_camera(in_id($input, 'camera_id', 'cameras'), $user);
             if (empty($camera['is_active'])) {
-                throw new DemoValidationException('กล้องนี้ถูกปิดใช้งานอยู่');
+                throw new ValidationException('กล้องนี้ถูกปิดใช้งานอยู่');
             }
             $online = $camera['status'] === 'online';
             mk_log('CCTV', 'stream requested', ['user' => $user['id'], 'role' => $user['role'], 'camera' => $camera['code'], 'school' => $camera['school_id'], 'online' => $online]);
@@ -375,7 +375,7 @@ try {
             authorize(can_write_table($user, 'foodMenus'), 'บัญชีนี้ไม่มีสิทธิ์แก้ไขเมนูอาหาร', ['role' => $user['role']]);
             $meal = (string) ($input['meal'] ?? '');
             if (!cat_find('meals', $meal)) {
-                throw new DemoValidationException('ไม่พบมื้ออาหารนี้');
+                throw new ValidationException('ไม่พบมื้ออาหารนี้');
             }
             $rawItems = $input['items'] ?? [];
             if (is_string($rawItems)) { // multipart (photos attached): items arrive as a JSON string
@@ -383,14 +383,14 @@ try {
             }
             $items = array_values(array_filter(array_map(fn ($i) => mb_substr(trim((string) $i), 0, 60), (array) $rawItems), fn ($i) => $i !== ''));
             if (!$items) {
-                throw new DemoValidationException('กรุณากรอกรายการอาหารอย่างน้อย 1 รายการ');
+                throw new ValidationException('กรุณากรอกรายการอาหารอย่างน้อย 1 รายการ');
             }
             // Food photos taken / picked in the meal form: check permission + every file BEFORE saving the menu.
             $mealPhotos = uploaded_files();
             if ($mealPhotos) {
                 authorize(has_feature('media') && can_write_table($user, 'mediaFiles'), 'บัญชีนี้ไม่มีสิทธิ์อัปโหลดรูปภาพ', ['role' => $user['role']]);
                 if (count($mealPhotos) > MEDIA_MAX_FILES) {
-                    throw new DemoValidationException('อัปโหลดได้ครั้งละไม่เกิน ' . MEDIA_MAX_FILES . ' รูป');
+                    throw new ValidationException('อัปโหลดได้ครั้งละไม่เกิน ' . MEDIA_MAX_FILES . ' รูป');
                 }
                 array_map('validate_image_upload', $mealPhotos);
             }
@@ -425,7 +425,7 @@ try {
             $meal = (string) ($input['meal'] ?? '');
             $level = (string) ($input['level'] ?? '');
             if (!cat_find('meals', $meal) || !cat_find('intake', $level)) {
-                throw new DemoValidationException('กรุณาเลือกระดับการรับประทานจากรายการ');
+                throw new ValidationException('กรุณาเลือกระดับการรับประทานจากรายการ');
             }
             $existing = find_row('foodIntake', $id);
             authorize($existing !== null && row_in_scope($user, 'foodIntake', $existing), 'ไม่มีสิทธิ์บันทึกข้อมูลของเด็กคนนี้', ['id' => $id]);
@@ -438,7 +438,7 @@ try {
             authorize(has_feature('chat') && can_write_table($user, 'messages'), 'บัญชีนี้ไม่มีสิทธิ์ส่งข้อความ', ['role' => $user['role']]);
             $text = trim((string) ($input['text'] ?? ''));
             if ($text === '') {
-                throw new DemoValidationException('กรุณาพิมพ์ข้อความ');
+                throw new ValidationException('กรุณาพิมพ์ข้อความ');
             }
             $row = chat_send($user, in_id($input, 'student_id', 'students'), $text);
             json_response(['ok' => true, 'chat' => chat_message_public($row, $user), 'version' => store_state()['version'],
@@ -465,21 +465,6 @@ try {
                 'threads' => $unread, 'chatUnread' => array_sum($unread),
                 'unread' => notifications_unread_count($user), 'version' => store_state()['version']]);
 
-        case 'reset_demo':
-            authorize(demo_mode(), 'ไม่สามารถดำเนินการได้', ['reason' => 'DEMO_MODE off']); // never wipes real data
-            authorize(in_array($user['role'], ['admin', 'teacher'], true), 'บัญชีนี้ไม่มีสิทธิ์รีเซ็ตข้อมูล', ['role' => $user['role']]);
-            store_reset_scope(function (string $table, array $row) use ($user) {
-                if ($user['role'] === 'teacher' && !can_write_table($user, $table)) {
-                    return false;
-                }
-                if ($user['role'] === 'admin' && in_array($table, ['users', 'schools'], true)) {
-                    return false;
-                }
-                return row_in_scope($user, $table, $row);
-            });
-            $message = 'รีเซ็ตข้อมูล Demo ในขอบเขตของบัญชีนี้เรียบร้อยแล้ว';
-            break;
-
         default:
             json_response(['ok' => false, 'message' => 'ไม่สามารถดำเนินการได้ กรุณาลองใหม่อีกครั้ง'], 400);
     }
@@ -489,7 +474,7 @@ try {
 } catch (PermissionDeniedException $ex) {
     mk_log('Api', 'permission ERROR', ['action' => $action, 'user' => $user['id'], 'role' => $user['role'], 'error' => $ex->getMessage(), 'input' => $input]);
     json_response(['ok' => false, 'message' => $ex->getMessage()], 403);
-} catch (DemoValidationException $ex) {
+} catch (ValidationException $ex) {
     mk_log('Api', 'validation ERROR', ['action' => $action, 'error' => $ex->getMessage(), 'input' => $input]);
     json_response(['ok' => false, 'message' => $ex->getMessage()], 422);
 } catch (Throwable $ex) {

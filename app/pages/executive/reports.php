@@ -1,29 +1,30 @@
 <?php
-/** Executive — reports with a mock period filter (today / week / month). Read only, own school. */
+/** Executive — reports for today / this week / this month, counted from the real records. Read only, own school. */
 declare(strict_types=1);
 
 $user = current_user();
 $period = in_array($_GET['period'] ?? '', ['today', 'week', 'month'], true) ? $_GET['period'] : 'today';
-$days = period_days($period);
+$from = period_start($period);
+$days = $period === 'today' ? 1 : 2;
 $periodLabel = ['today' => 'วันนี้', 'week' => 'สัปดาห์นี้', 'month' => 'เดือนนี้'][$period];
 $rooms = my_classrooms();
 $students = scoped('students');
 $k = kpis();
 
-// Mock period scaling: today's real numbers × school days, with stable variation.
-$scale = fn (int $value, string $salt) => $days === 1 ? $value : (int) round($value * $days * (0.92 + (mk_rand($salt, $period) % 9) / 100));
-
 $statusCounts = [];
-foreach (array_filter(scoped('statuses'), fn ($s) => is_today($s['at'])) as $s) {
+foreach (rows_since(scoped('statuses'), $from, 'at') as $s) {
     $statusCounts[$s['code']] = ($statusCounts[$s['code']] ?? 0) + 1;
 }
 arsort($statusCounts);
-$attCounts = attendance_counts(today_rows(scoped('attendance')));
-if ($days > 1) {
-    foreach ($attCounts as $code => $n) {
-        $attCounts[$code] = $scale($n, 'att' . $code);
+$attCounts = attendance_counts(rows_since(scoped('attendance'), $from));
+$periodActivities = rows_since(scoped('activities'), $from);
+$periodMeals = 0; // meals with a menu entered in the period
+foreach (rows_since(scoped('foodMenus'), $from) as $menu) {
+    foreach (mk_catalog()['meals'] as $m) {
+        $periodMeals += empty($menu[$m['meal']]) ? 0 : 1;
     }
 }
+$trend = attendance_trend($period === 'month' ? 22 : ($period === 'week' ? 5 : 5));
 
 mk_header(['id' => 'exec-reports', 'title' => 'รายงาน', 'nav' => 'reports']);
 page_title('📑', 'รายงานภาพรวม', $user['school']['name'] . ' · ' . $periodLabel,
@@ -34,7 +35,7 @@ page_title('📑', 'รายงานภาพรวม', $user['school']['name
         <a class="chip-btn<?= $key === $period ? ' is-active' : '' ?>" href="?period=<?= $key ?>"<?= $key === $period ? ' aria-current="true"' : '' ?>><?= e($label) ?></a>
     <?php endforeach; ?>
 </nav>
-<p class="hint">📌 ตัวเลขสัปดาห์/เดือนเป็นข้อมูลจำลองสำหรับ Demo · <span class="readonly-badge">👁️ อ่านอย่างเดียว</span></p>
+<p class="hint">📌 นับจากข้อมูลที่บันทึกจริงตั้งแต่ <?= e(thai_short_date($from)) ?> ถึงวันนี้ · <span class="readonly-badge">👁️ อ่านอย่างเดียว</span></p>
 
 <div class="report-grid" data-live id="live-reports">
     <section class="card">
@@ -71,12 +72,12 @@ page_title('📑', 'รายงานภาพรวม', $user['school']['name
     </section>
 
     <section class="card">
-        <?php section_head('🎨', '4. สรุปกิจกรรม', '<span class="count-badge">' . $scale($k['activities'], 'act') . ' รายการ</span>', $periodLabel); ?>
-        <?= chart_hbars(array_map(fn ($r, $i) => ['label' => $r['name'], 'emoji' => $r['emoji'], 'value' => $scale(count(classroom_activities($r['id'])), 'act' . $r['id']), 'color' => CHART_SERIES[$i % 3]], $rooms, array_keys($rooms)), ' รายการ') ?>
+        <?php section_head('🎨', '4. สรุปกิจกรรม', '<span class="count-badge">' . count($periodActivities) . ' รายการ</span>', $periodLabel); ?>
+        <?= chart_hbars(array_map(fn ($r, $i) => ['label' => $r['name'], 'emoji' => $r['emoji'], 'value' => count(where($periodActivities, 'classroom_id', $r['id'])), 'color' => CHART_SERIES[$i % 3]], $rooms, array_keys($rooms)), ' รายการ') ?>
     </section>
 
     <section class="card">
-        <?php section_head('🍱', '5. สรุปอาหาร', '<span class="count-badge">' . $scale($k['foodReady'] * count(mk_catalog()['meals']), 'food') . ' มื้อ</span>', $periodLabel); ?>
+        <?php section_head('🍱', '5. สรุปอาหาร', '<span class="count-badge">' . $periodMeals . ' มื้อ</span>', $periodLabel); ?>
         <ul class="menu-list">
             <?php foreach ($rooms as $r): ?>
                 <?php $lunch = array_values(array_filter(classroom_food($r['id']), fn ($m) => $m['meal'] === 'lunch'))[0]['items'] ?? []; ?>
@@ -98,16 +99,16 @@ page_title('📑', 'รายงานภาพรวม', $user['school']['name
 
     <section class="card">
         <?php section_head('🚦', '6. สรุป Status', '', 'จำนวนครั้งที่ครูอัปเดตแต่ละสถานะ · ' . $periodLabel); ?>
-        <?= chart_hbars(array_map(function ($code, $n) use ($scale) {
+        <?= $statusCounts ? chart_hbars(array_map(function ($code, $n) {
             $def = cat_find('statuses', $code);
-            return ['label' => $def['label'], 'emoji' => $def['emoji'], 'value' => $scale($n, 'st' . $code)];
-        }, array_keys($statusCounts), $statusCounts), ' ครั้ง') ?>
+            return ['label' => $def['label'] ?? $code, 'emoji' => $def['emoji'] ?? '', 'value' => $n];
+        }, array_keys($statusCounts), $statusCounts), ' ครั้ง') : empty_state('🚦', 'ยังไม่มีการอัปเดตสถานะในช่วงนี้') ?>
     </section>
 
     <section class="card">
         <?php section_head('✅', 'สรุปการเข้าเรียน', '', $periodLabel . ($days > 1 ? ' (นับเป็นคน-วัน)' : '')); ?>
         <?= chart_stack(attendance_parts($attCounts), $days > 1 ? 'คน-วัน' : 'คน') ?>
-        <?= chart_bars(attendance_trend(min(10, max(5, $days)), 'school' . $user['school_id']), '%', 100) ?>
+        <?= $trend ? chart_bars($trend, '%', 100) : empty_state('📊', 'ยังไม่มีข้อมูลการเช็คชื่อ') ?>
     </section>
 
     <?php if (has_feature('stars')): ?>

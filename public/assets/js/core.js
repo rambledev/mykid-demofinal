@@ -543,25 +543,7 @@
         setBusy(form.querySelector('[type="submit"]'), true);
       }
     });
-    const auto = form.dataset.autofill && form.querySelector(`.demo-account-btn[data-phone="${form.dataset.autofill}"]`);
-    if (auto) fillAccount(auto); // arrived from the role selection / demo guide
-    if (auto && 'autosubmit' in form.dataset) form.requestSubmit(); // role card → straight into the demo
     Log.end('initLogin');
-  }
-
-  function fillAccount(button) {
-    const form = button.closest('form');
-    const { role, phone, pin } = button.dataset;
-    const roleInput = form.querySelector(`input[name="role"][value="${role}"]`);
-    if (roleInput && !roleInput.checked) {
-      roleInput.checked = true;
-      roleInput.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-    form.querySelector('[data-phone-input]').value = formatPhone(phone);
-    fillPin($$('.pin__box', form), pin);
-    $$('.demo-account-btn', form).forEach((b) => b.classList.toggle('is-selected', b === button));
-    form.querySelector('[type="submit"]').focus({ preventScroll: true });
-    toast(`เลือกบัญชี “${button.querySelector('strong').textContent}” แล้ว กด “เข้าสู่ระบบ” ได้เลย`, 'info');
   }
 
   /* ------------------------------------------------------------------------
@@ -716,7 +698,7 @@
    * re-checks the user's permission for that camera and returns { type, url, token }.
    *
    * Drivers share one interface:  mount(el, camera, stream) → { destroy(), setMuted(bool) }
-   *   mock   — animated demo camera (no network, used while stream_url is empty)
+   *   mock   — "not connected" placeholder (no stream URL configured yet) — never a fake picture
    *   hls    — native HLS (Safari) or hls.js, lazy-loaded only when a real .m3u8 is configured
    *   webrtc — WHEP: POST an SDP offer to the media server, play the answer
    * --------------------------------------------------------------------- */
@@ -724,36 +706,6 @@
     const players = new Map();
     const HLS_JS = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js'; // pinned version (CSP allows jsDelivr)
     let hlsLoading = null;
-
-    const SCENES = {
-      classroom: `<rect width="320" height="180" fill="#FFF4CC"/><rect y="128" width="320" height="52" fill="#F1D9B5"/>
-        <rect x="24" y="22" width="92" height="62" rx="6" fill="#BFE7FF" stroke="#fff" stroke-width="5"/>
-        <g><ellipse cx="60" cy="44" rx="16" ry="7" fill="#fff"/><animateTransform attributeName="transform" type="translate" values="-20 0; 40 0; -20 0" dur="18s" repeatCount="indefinite"/></g>
-        <rect x="140" y="26" width="120" height="58" rx="6" fill="#4C7A63"/><text x="152" y="62" font-size="20" fill="#fff" font-family="sans-serif">A B C 1 2 3</text>
-        <circle cx="290" cy="40" r="14" fill="#fff" stroke="#FFB547" stroke-width="3"/><line x1="290" y1="40" x2="290" y2="31" stroke="#2F3A56" stroke-width="2"><animateTransform attributeName="transform" type="rotate" values="0 290 40; 360 290 40" dur="60s" repeatCount="indefinite"/></line>
-        <rect x="40" y="112" width="80" height="12" rx="4" fill="#FF9F7A"/><rect x="48" y="124" width="6" height="22" fill="#C97A5A"/><rect x="106" y="124" width="6" height="22" fill="#C97A5A"/>
-        <rect x="190" y="112" width="80" height="12" rx="4" fill="#7CC6F2"/><rect x="198" y="124" width="6" height="22" fill="#5A9CC4"/><rect x="256" y="124" width="6" height="22" fill="#5A9CC4"/>
-        <rect x="140" y="140" width="14" height="14" fill="#FF9EC0"/><rect x="156" y="140" width="14" height="14" fill="#FFC94D"/><rect x="148" y="126" width="14" height="14" fill="#8FD9A8"/>
-        <circle cx="60" cy="164" r="8" fill="#FF7AA8"><animate attributeName="cx" values="40;280;40" dur="9s" repeatCount="indefinite"/></circle>`,
-      playground: `<defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9FD6FF"/><stop offset="1" stop-color="#DFF4FF"/></linearGradient></defs>
-        <rect width="320" height="180" fill="url(#sky)"/><circle cx="270" cy="34" r="16" fill="#FFD66B"/>
-        <g fill="#fff"><ellipse cx="70" cy="34" rx="22" ry="9"/><animateTransform attributeName="transform" type="translate" values="0 0; 60 0; 0 0" dur="24s" repeatCount="indefinite"/></g>
-        <rect y="118" width="320" height="62" fill="#8FD9A8"/><rect x="214" y="146" width="80" height="22" rx="6" fill="#FFE1A8"/>
-        <path d="M30 70 h40 v50 h-6 v-44 h-28 v44 h-6z" fill="#FF9F7A"/><path d="M64 76 L120 124 h-10 L58 82z" fill="#FFC94D"/>
-        <g><line x1="150" y1="52" x2="150" y2="120" stroke="#7A5600" stroke-width="5"/><line x1="230" y1="52" x2="230" y2="120" stroke="#7A5600" stroke-width="5"/><line x1="146" y1="52" x2="234" y2="52" stroke="#7A5600" stroke-width="6"/></g>
-        <g><line x1="190" y1="54" x2="182" y2="104" stroke="#555" stroke-width="2"/><line x1="190" y1="54" x2="198" y2="104" stroke="#555" stroke-width="2"/><rect x="178" y="104" width="24" height="6" rx="2" fill="#B79CFF"/>
-          <animateTransform attributeName="transform" type="rotate" values="-14 190 54; 14 190 54; -14 190 54" dur="3s" repeatCount="indefinite"/></g>
-        <circle cx="290" cy="110" r="22" fill="#6CC08A"/><rect x="286" y="118" width="8" height="24" fill="#8A5A3B"/>`,
-      gate: `<rect width="320" height="180" fill="#DFF4FF"/><g fill="#fff"><ellipse cx="240" cy="30" rx="24" ry="9"/><animateTransform attributeName="transform" type="translate" values="0 0; -70 0; 0 0" dur="26s" repeatCount="indefinite"/></g>
-        <rect x="70" y="40" width="180" height="78" fill="#FFEAF2"/><path d="M60 44 L160 10 L260 44z" fill="#FF9EC0"/>
-        <rect x="140" y="80" width="40" height="38" fill="#B79CFF"/><rect x="88" y="58" width="30" height="22" fill="#BFE7FF"/><rect x="202" y="58" width="30" height="22" fill="#BFE7FF"/>
-        <line x1="160" y1="10" x2="160" y2="-6" stroke="#555" stroke-width="2"/><path d="M160 -6 h20 v10 h-20z" fill="#FF7AA8"><animateTransform attributeName="transform" type="scale" values="1 1; 0.8 1; 1 1" dur="1.6s" repeatCount="indefinite"/></path>
-        <rect y="118" width="320" height="62" fill="#C9E7B8"/><path d="M130 180 L150 118 h20 L190 180z" fill="#EEE3CF"/>
-        <g stroke="#7A8299" stroke-width="4"><line x1="40" y1="96" x2="40" y2="150"/><line x1="280" y1="96" x2="280" y2="150"/></g>
-        <g stroke="#9AA3BA" stroke-width="3"><line x1="44" y1="104" x2="128" y2="104"/><line x1="44" y1="126" x2="128" y2="126"/><line x1="192" y1="104" x2="276" y2="104"/><line x1="192" y1="126" x2="276" y2="126"/></g>
-        <g><rect x="-40" y="150" width="42" height="16" rx="5" fill="#FFC94D"/><circle cx="-30" cy="168" r="5" fill="#2F3A56"/><circle cx="-8" cy="168" r="5" fill="#2F3A56"/>
-          <animateTransform attributeName="transform" type="translate" values="0 0; 380 0" dur="11s" repeatCount="indefinite"/></g>`,
-    };
 
     const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const stamp = () => { const t = thaiNow(); return `${t.date} ${t.hms} น.`; }; // e.g. 10/10/2569 14:30:05 น.
@@ -786,8 +738,8 @@
 
     const Drivers = {
       mock: {
-        mount(el, cam) {
-          el.innerHTML = `<span class="cctv-mock"><svg viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${SCENES[cam.scene] || SCENES.classroom}</svg><span class="cctv-noise"></span></span>${osd(cam)}`;
+        mount(el) {
+          signal(el, '📡', 'กล้องนี้ยังไม่ได้เชื่อมต่อสัญญาณ', 'ผู้ดูแลโรงเรียนต้องตั้งค่า Stream URL จาก Media Server ก่อน');
           return { destroy() { el.innerHTML = ''; }, setMuted() {}, hasAudio: false };
         },
       },
@@ -930,7 +882,7 @@
     if (player) player.setMuted(viewer.muted);
     button.textContent = viewer.muted ? '🔇' : '🔊';
     button.setAttribute('aria-pressed', viewer.muted ? 'true' : 'false');
-    if (player && !player.hasAudio) toast('กล้อง Demo ไม่มีสัญญาณเสียง', 'info');
+    if (player && !player.hasAudio) toast('กล้องนี้ไม่มีสัญญาณเสียง', 'info');
   }
 
   /* ------------------------------------------------------------------------
@@ -1152,7 +1104,6 @@
     'cancel-meal': (b) => toggleMealEdit(b, false),
     'open-thread': (b) => openThread(b.dataset.thread),
     'close-thread': () => { const l = $('[data-chat-layout]'); if (l) l.classList.remove('is-thread-open'); activeThread = null; },
-    'fill-account': fillAccount,
     print: () => window.print(),
     'open-camera': (b) => { const s = openSheet('sheet-camera'); if (s) $('.sheet__title', s).textContent = b.dataset.name; },
     'upload-open': openUpload,
@@ -1168,10 +1119,6 @@
     'cctv-close': closeViewer,
     'cctv-fullscreen': toggleFullscreen,
     'cctv-mute': toggleMute,
-    'reset-demo': async (b) => {
-      const ok = await confirmDialog({ title: 'รีเซ็ตข้อมูล Demo?', message: 'ข้อมูลในขอบเขตของบัญชีนี้จะกลับเป็นค่าเริ่มต้น', icon: '🔄', okLabel: 'รีเซ็ต' });
-      if (ok && await runAction(b, 'reset_demo')) setTimeout(() => window.location.reload(), 800);
-    },
   };
 
   document.addEventListener('click', (event) => {

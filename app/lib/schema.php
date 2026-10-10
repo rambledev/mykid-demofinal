@@ -161,7 +161,7 @@ function mk_tables(): array
             'description'   => ['label' => 'รายละเอียด', 'type' => 'text', 'max' => 120],
             'classroom_id'  => ['label' => 'ห้องเรียน (เว้นว่าง = พื้นที่ส่วนกลาง)', 'type' => 'classroom'],
             'camera_model'  => ['label' => 'รุ่นกล้อง', 'type' => 'text', 'max' => 40, 'placeholder' => 'เช่น Tapo C200C'],
-            'stream_type'   => ['label' => 'ประเภท Stream', 'type' => 'select', 'required' => true, 'options' => ['mock' => 'Mock (Demo)', 'hls' => 'HLS (.m3u8)', 'webrtc' => 'WebRTC (WHEP)']],
+            'stream_type'   => ['label' => 'ประเภท Stream', 'type' => 'select', 'required' => true, 'options' => STREAM_TYPES],
             'stream_url'    => ['label' => 'Stream URL จาก Media Server', 'type' => 'url', 'max' => 300, 'placeholder' => 'https://media.example/cam01/index.m3u8'],
             'rtsp_url'      => ['label' => 'RTSP URL (ฝั่ง Server เท่านั้น)', 'type' => 'secret', 'max' => 300, 'placeholder' => 'เว้นว่าง = ใช้ค่าเดิม · ห้ามใส่รหัสผ่าน'],
             'status'        => ['label' => 'สถานะ', 'type' => 'select', 'required' => true, 'options' => ['online' => '🟢 Online', 'offline' => '🔴 Offline', 'maintenance' => '🛠️ Maintenance']],
@@ -186,7 +186,7 @@ function table_def(string $table): array
 {
     $def = mk_tables()[$table] ?? null;
     if (!$def) {
-        throw new DemoValidationException('ไม่พบข้อมูลที่ต้องการ');
+        throw new ValidationException('ไม่พบข้อมูลที่ต้องการ');
     }
     return $def;
 }

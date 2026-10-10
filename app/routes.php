@@ -14,7 +14,6 @@ return [
         ['GET',      '/',              'home'],
         ['GET|POST', '/login',         'login'],
         ['POST',     '/logout',        'logout'],
-        ['GET',      '/logout',        'logout'],          // demo role switch links (DEMO_MODE); plain GET only logs out
         ['POST',     '/api',           'api',     ['json' => true]],
         ['GET',      '/media/{token}', 'media'],
         ['GET',      '/healthz',       'healthz', ['stateless' => true]],

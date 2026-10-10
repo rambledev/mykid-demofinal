@@ -585,26 +585,6 @@
 .cctv-screen video, .cctv-viewer__screen video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; }
 
 /* Mock live player */
-.cctv-mock { position: absolute; inset: 0; }
-.cctv-mock svg { position: absolute; inset: 0; width: 100%; height: 100%; filter: saturate(.92) contrast(1.04); }
-.cctv-mock::after { /* scanlines + vignette = "camera feel" */
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    repeating-linear-gradient(0deg, rgba(0, 0, 0, .06) 0 2px, transparent 2px 4px),
-    radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, .35) 100%);
-  pointer-events: none;
-}
-.cctv-noise {
-  position: absolute;
-  inset: -50%;
-  background-image: radial-gradient(rgba(255, 255, 255, .08) 1px, transparent 1px);
-  background-size: 3px 3px;
-  animation: cctv-noise .4s steps(4) infinite;
-  pointer-events: none;
-  opacity: .6;
-}
 @keyframes cctv-noise { 0% { transform: translate(0, 0); } 25% { transform: translate(-2%, 1%); } 50% { transform: translate(1%, -2%); } 75% { transform: translate(-1%, 2%); } }
 .cctv-osd {
   position: absolute;

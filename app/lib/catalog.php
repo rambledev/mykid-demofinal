@@ -1,7 +1,7 @@
 <?php
 /**
- * Core catalog — fixed lookup lists (roles, statuses, meals, levels, ...).
- * Classroom statuses and activity icons are reused from Package C's mock data.
+ * Core catalog — fixed lookup lists (roles, classroom statuses, meals, levels, ...).
+ * Configuration only: the school's real data (rooms, people, records) lives in the database.
  */
 declare(strict_types=1);
 
@@ -12,9 +12,13 @@ function mk_catalog(): array
         return $catalog;
     }
 
-    $allMeals = array_merge(mock_data()['mealTypes'], [
-        ['meal' => 'fruit', 'label' => 'ผลไม้', 'icon' => '🍎', 'time' => '14:30', 'color' => '#FFE4E4'],
-    ]);
+    $allMeals = [
+        ['meal' => 'breakfast', 'label' => 'อาหารเช้า',    'icon' => '🍚', 'time' => '07:30', 'color' => '#FFF4CC'],
+        ['meal' => 'lunch',     'label' => 'อาหารกลางวัน', 'icon' => '🍱', 'time' => '11:00', 'color' => '#FFE9D6'],
+        ['meal' => 'snack',     'label' => 'อาหารว่าง',    'icon' => '🍌', 'time' => '14:30', 'color' => '#FFF6C7'],
+        ['meal' => 'milk',      'label' => 'นม',          'icon' => '🥛', 'time' => '14:30', 'color' => '#E9F5FF'],
+        ['meal' => 'fruit',     'label' => 'ผลไม้',        'icon' => '🍎', 'time' => '14:30', 'color' => '#FFE4E4'],
+    ];
 
     $catalog = [
         'roles' => [
@@ -23,8 +27,21 @@ function mk_catalog(): array
             'teacher'     => ['label' => 'Teacher',     'th' => 'ครู',             'emoji' => '👩‍🏫', 'theme' => 'teacher', 'dir' => 'teacher', 'layout' => 'app'],
             'parent'      => ['label' => 'Parent',      'th' => 'ผู้ปกครอง',        'emoji' => '👨‍👩‍👧', 'theme' => 'parent', 'dir' => 'parent', 'layout' => 'app'],
         ],
-        'statuses'      => mock_data()['statuses'],
-        'activityIcons' => mock_data()['activityIcons'],
+        // Classroom-wide statuses the teacher sets during the day.
+        'statuses' => [
+            ['code' => 'line_up',  'label' => 'เข้าแถว',        'emoji' => '🚩', 'color' => '#FFF4CC'],
+            ['code' => 'study',    'label' => 'เข้าเรียน',       'emoji' => '📚', 'color' => '#DFF4FF'],
+            ['code' => 'toilet',   'label' => 'เข้าห้องน้ำ',      'emoji' => '🚻', 'color' => '#E3F6FF'],
+            ['code' => 'eat',      'label' => 'ทานอาหาร',       'emoji' => '🍱', 'color' => '#FFE9D6'],
+            ['code' => 'rest',     'label' => 'พักกลางวัน',      'emoji' => '🧸', 'color' => '#F1EAFF'],
+            ['code' => 'sleep',    'label' => 'นอนหลับ',        'emoji' => '😴', 'color' => '#E6E3FF'],
+            ['code' => 'activity', 'label' => 'ทำกิจกรรม',      'emoji' => '🎨', 'color' => '#FFEAF2'],
+            ['code' => 'outdoor',  'label' => 'เล่นกลางแจ้ง',    'emoji' => '⚽', 'color' => '#DDF7E6'],
+            ['code' => 'pack',     'label' => 'เก็บของ',         'emoji' => '🎒', 'color' => '#FFF1D6'],
+            ['code' => 'go_home',  'label' => 'เตรียมกลับบ้าน',  'emoji' => '🏠', 'color' => '#FFE1E1'],
+        ],
+        // Icons a teacher can pick when adding an activity.
+        'activityIcons' => ['🚩', '📚', '🔢', '🔤', '🎨', '🎵', '🔬', '📖', '🧩', '🌱', '🍱', '😴', '⚽', '🧸', '⭐', '🎉'],
         'meals'         => array_values(array_filter($allMeals, fn ($m) => in_array($m['meal'], pkg()['meals'], true))),
         'intake' => [
             ['code' => 'good',   'label' => 'กินได้ดี',       'emoji' => '😋', 'tone' => 'good'],

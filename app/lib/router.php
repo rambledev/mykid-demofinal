@@ -85,6 +85,10 @@ function mk_dispatch(): void
         route_param('', array_filter($m, 'is_string', ARRAY_FILTER_USE_KEY));
         send_security_headers();
         if (empty($options['stateless'])) {
+            if (!store_rows('schools')) { // fresh database: nothing to show until `php database/install.php --school=...`
+                mk_log('Router', 'not set up (no school)', ['path' => $path]);
+                error_page(503, 'ระบบยังไม่พร้อมใช้งาน', 'ผู้ดูแลระบบกำลังตั้งค่าข้อมูลโรงเรียน กรุณาลองใหม่อีกครั้งภายหลัง');
+            }
             mk_session_start();
         }
         mk_render($page, $options['role'] ?? null);

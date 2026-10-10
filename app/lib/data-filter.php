@@ -358,31 +358,42 @@ function attendance_counts(array $rows): array
 }
 
 /**
- * Attendance % for the last N school days (today = real data, earlier days = mock history
- * derived deterministically from the scope so it stays stable between reloads).
+ * Attendance % of the last N school days that have checked attendance (real records only):
+ * present + late ÷ students with a status that day. Days without any check are skipped.
  */
-function attendance_trend(int $days, string $salt = ''): array
+function attendance_trend(int $days): array
 {
-    $todayPct = kpis()['attendancePct'];
-    $series = [];
-    $ts = time();
-    $n = 0;
-    while (count($series) < $days) {
-        $dow = (int) date('w', $ts);
-        if ($dow !== 0 && $dow !== 6) {
-            $label = THAI_DAYS_SHORT[$dow] . ' ' . date('j', $ts);
-            $series[] = ['label' => $label, 'value' => $n === 0 ? $todayPct : 86 + mk_rand($salt, date('Y-m-d', $ts)) % 12];
-            $n++;
+    $byDate = [];
+    foreach (scoped('attendance') as $a) {
+        if (($a['status'] ?? '') === '') {
+            continue; // sheet opened, not checked yet
         }
-        $ts = strtotime('-1 day', $ts);
+        $byDate[$a['date']]['all'] = ($byDate[$a['date']]['all'] ?? 0) + 1;
+        $byDate[$a['date']]['here'] = ($byDate[$a['date']]['here'] ?? 0) + (in_array($a['status'], ['present', 'late'], true) ? 1 : 0);
+    }
+    krsort($byDate);
+    $series = [];
+    foreach (array_slice($byDate, 0, $days, true) as $date => $n) {
+        $ts = strtotime($date);
+        $series[] = ['label' => THAI_DAYS_SHORT[(int) date('w', $ts)] . ' ' . date('j', $ts), 'value' => percent($n['here'], $n['all'])];
     }
     return array_reverse($series);
 }
 
-/** Multiplier used by the mock period filter on reports. */
-function period_days(string $period): int
+/** First day (Y-m-d) of a report period: today, this week (Monday) or this month. */
+function period_start(string $period): string
 {
-    return ['today' => 1, 'week' => 5, 'month' => 22][$period] ?? 1;
+    return match ($period) {
+        'week'  => date('Y-m-d', strtotime('monday this week')),
+        'month' => date('Y-m-01'),
+        default => today(),
+    };
+}
+
+/** Rows whose date (or datetime) column falls between $from and today. */
+function rows_since(array $rows, string $from, string $field = 'date'): array
+{
+    return array_values(array_filter($rows, fn ($r) => ($d = substr((string) ($r[$field] ?? ''), 0, 10)) !== '' && $d >= $from && $d <= today()));
 }
 
 /**

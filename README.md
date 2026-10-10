@@ -2,7 +2,7 @@
 
 Mykid — a school ↔ parent communication system for one school: ศูนย์พัฒนาเด็กเล็กบ้านโพนสูง (ศพด.บ้านโพนสูง).
 Roles: **School Admin · Executive · Teacher · Parent** (no platform-level Super Admin — one school only).
-It started as a copy of **Mykid Final Demo v1.0** and is being developed further as the real system (ADR-020, ADR-021 in
+It started as a copy of **Mykid Final Demo v1.0** and is now the real system — all demo data removed (ADR-020 – ADR-023 in
 `docs/production/decision-log.md`).
 
 | | |
@@ -18,23 +18,21 @@ It started as a copy of **Mykid Final Demo v1.0** and is being developed further
 ```bash
 cd ~/Desktop/product/mykid-demofinal
 cp .env.example .env            # first time only — fill in DB_PASS and APP_KEY (openssl rand -base64 48)
-php database/install.php        # first time only — creates the tables + seeds the demo data
+php database/install.php --school="ศูนย์พัฒนาเด็กเล็กบ้านโพนสูง" --short="ศพด.บ้านโพนสูง" --province="..." \
+    --admin-name="ชื่อผู้ดูแล" --admin-phone=08xxxxxxxx --admin-pin=xxxxxx   # first time only
 php -d upload_max_filesize=12M -d post_max_size=64M -d memory_limit=256M -S 127.0.0.1:8081 -t public public/index.php
 ```
 
-- `php database/install.php --reset` drops every table and seeds again.
-- Missing tables are also created automatically on the first request (`database/schema.sql` is idempotent).
+- There is **no demo data**: install creates only the tables, the school and the first admin account; the admin enters
+  classrooms, teachers, students and accounts. Until a school exists, every page shows "ระบบยังไม่พร้อมใช้งาน".
+- `php database/install.php --reset --school=... ...` drops every table (all data is lost) and sets up again.
+- `php database/check.php` tests the connection; missing tables / new columns are applied automatically (`schema.sql`).
 
-### DEMO_MODE (`.env`)
+### Every school day
 
-| | `DEMO_MODE=1` (testing) | `DEMO_MODE=0` (real use) |
-|---|---|---|
-| Home page role cards | one tap logs into that role's demo account (through the real login: CSRF, hashed PIN, throttling) | open the login page for that role |
-| Login page | list of test accounts (PIN `123456`) | phone + PIN only |
-| New day | random but realistic records for every child + sample pickups | an **empty daily sheet** per child (attendance not checked, nap pending, …) that teachers fill in |
-| "รีเซ็ตข้อมูล Demo" | available (account page) | hidden and blocked in the API |
-
-Activity schedules and food menus are copied from the latest day as a template in both modes.
+The first request of a day opens an **empty daily sheet** per student (attendance not checked, nap pending, health and
+meals not recorded) that the teachers fill in; a student added during the day gets one immediately. Nothing is
+generated or copied automatically — schedules, menus and statuses are entered by the teachers.
 
 ### MariaDB on this Mac
 
@@ -82,8 +80,8 @@ app/
                         admin/ executive/ parent/ teacher/ common/
 database/
   schema.sql            27 app tables + app_meta + login_attempts
-  install.php           CLI: create tables / --reset
-  seeds/                demo source data (base-data, mock-data, cctv-data)
+  install.php           CLI: tables + school + first admin (--reset = start over)
+  check.php             CLI: test the database connection
 storage/uploads/        uploaded images (private — streamed by /media/{token} after a permission check)
 docker/  Dockerfile     Apache image, DocumentRoot = public/
 docs/                   security.md, production/ (architecture docs, decision log)
@@ -137,11 +135,11 @@ DB_NAME=default
 DB_USER=mariadb
 DB_PASS=<Normal User Password of the MariaDB resource>
 APP_KEY=<openssl rand -base64 48 — never change after go-live>
-DEMO_MODE=1   # 0 for real use
 ```
 
 - Test the connection: Coolify → Application → **Terminal** → `php database/check.php` (host, server version,
   tables, row counts — never the password), or open `https://<domain>/readyz` (`ok` = database reachable).
 - The MariaDB resource stays private (no public port); the app reaches it over Coolify's internal network.
-  Tables are created and seeded on the first request. `TRUST_PROXY=1` (Dockerfile default) reads the client IP from
+  Tables are created on the first connection; then run once in the application Terminal:
+  `php database/install.php --school=... --admin-phone=... --admin-pin=...`. `TRUST_PROXY=1` (Dockerfile default) reads the client IP from
   Traefik's `X-Forwarded-For` for login throttling.

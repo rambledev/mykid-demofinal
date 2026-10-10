@@ -1004,10 +1004,6 @@ body.has-sheet { overflow: hidden; }
 .room-list__emoji { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 14px; font-size: 22px; }
 
 .account-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.demo-account { padding: 14px; border-radius: var(--radius); font-size: 15px; }
-.demo-account--teacher { background: var(--blue-2); }
-.demo-account--parent { background: var(--pink-2); }
-.demo-account__role { font-weight: 800; margin-bottom: 4px; }
 .landing-cta-bottom { margin-top: 14px; }
 .landing-footer { text-align: center; font-size: 14px; color: var(--ink-soft); padding-top: 8px; }
 
@@ -1074,43 +1070,8 @@ body.has-sheet { overflow: hidden; }
 }
 .pin__box:focus { outline: none; border-color: var(--primary-strong); background: #fff; transform: translateY(-2px); }
 
-.demo-hint { display: flex; flex-direction: column; gap: 6px; padding: 14px; border-radius: var(--radius); background: var(--yellow-2); font-size: 15px; }
-.demo-hint__title { font-weight: 800; }
-.demo-hint__title small { display: block; font-weight: 600; }
 
 /* Demo account selector — only the group for the selected role is shown */
-.demo-accounts { display: grid; gap: 8px; }
-.auth__card:has(input[name="role"][value="teacher"]:checked) .demo-accounts--parent,
-.auth__card:has(input[name="role"][value="parent"]:checked) .demo-accounts--teacher { display: none; }
-.demo-account-btn {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  min-height: 56px;
-  padding: 8px 12px;
-  border: 2px solid transparent;
-  border-radius: 16px;
-  background: #fff;
-  text-align: left;
-  cursor: pointer;
-  transition: border-color .15s, transform .1s;
-}
-.demo-account-btn:active { transform: scale(.98); }
-.demo-account-btn.is-selected { border-color: var(--primary-strong); }
-.demo-account-btn__emoji {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: var(--primary-2);
-  font-size: 20px;
-}
-.demo-account-btn__text { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
-.demo-account-btn__text strong { font-size: 15px; }
-.demo-account-btn__text small { font-size: 13px; }
 
 /* ---------- Tablet / desktop ---------- */
 @media (min-width: 560px) {

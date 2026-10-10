@@ -28,7 +28,6 @@ This is the standard every change must keep (OWASP ASVS level 1 style). The code
   - The session ID is regenerated on login and every 15 minutes.
   - Sessions expire after 2 h idle or 12 h in total.
 - **Logout.** Logout requires `POST` with a CSRF token. A plain `GET /logout` never logs anyone out.
-- **`DEMO_MODE=1`.** This turns on the one-tap demo accounts and the test-account list. They still go through the real login flow. It must be `0` in production.
 
 ## 3. Authorization
 

@@ -1,11 +1,11 @@
 <?php
 /**
- * Core authentication — phone + 6-digit PIN against the package's users table.
+ * Core authentication — phone + 6-digit PIN against the users table (PIN hashed, see security.php).
  *
  * After login, $_SESSION['user'] holds: id, name, role, school_id, classroom_id, student_id.
  * current_user() re-validates that record against the users table on every request
  * (as a real system would re-check the database) and re-derives the scope from it.
- * Not a real auth system: no PIN hashing or rate limiting — sales demo only.
+ * Login throttling and session hardening live in app/lib/security.php.
  */
 declare(strict_types=1);
 

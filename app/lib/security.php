@@ -205,12 +205,3 @@ function login_record_attempt(string $phone, bool $success): void
         $pdo->exec('DELETE FROM login_attempts WHERE attempted_at < NOW() - INTERVAL 1 DAY');
     }
 }
-
-/** PIN of every seeded demo account (shown on the login page in DEMO_MODE only). */
-const DEMO_PIN = '123456';
-
-/** Demo shortcuts (role cards on the home page, test accounts on the login page) — only when DEMO_MODE=1. */
-function demo_mode(): bool
-{
-    return mk_env('DEMO_MODE', '0') === '1';
-}

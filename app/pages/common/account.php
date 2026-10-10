@@ -1,10 +1,9 @@
 <?php
-/** Account page for every role — profile, permission scope, demo tools, logout. */
+/** Account page for every role — profile, permission scope, logout. */
 declare(strict_types=1);
 
 $user = current_user();
 $summary = permission_summary($user);
-$canReset = demo_mode() && in_array($user['role'], ['admin', 'teacher'], true);
 
 mk_header(['id' => $user['role'] . '-account', 'title' => 'บัญชี', 'nav' => 'account']);
 ?>
@@ -44,13 +43,6 @@ mk_header(['id' => $user['role'] . '-account', 'title' => 'บัญชี', 'na
         <li><span>📦 แพ็กเกจ</span><strong><?= e(pkg()['name']) ?></strong></li>
     </ul>
 </section>
-
-<?php if ($canReset): ?>
-    <section class="card">
-        <?php section_head('🧪', 'เครื่องมือ Demo', '', 'คืนค่าข้อมูลในขอบเขตของบัญชีนี้กลับเป็นค่าเริ่มต้น'); ?>
-        <button type="button" class="btn btn--soft btn--block" data-action="reset-demo"><?= icon('refresh') ?> รีเซ็ตข้อมูล Demo</button>
-    </section>
-<?php endif; ?>
 
 <form class="logout-form" method="post" action="<?= e(url('logout')) ?>"><?= csrf_field() ?><button type="submit" class="btn btn--danger-soft btn--lg btn--block"><?= icon('logout') ?> ออกจากระบบ</button></form>
 

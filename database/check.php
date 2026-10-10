@@ -28,8 +28,8 @@ $pass = (string) mk_env('DB_PASS', '');
 echo "[Check] Mykid database connection\n";
 printf("  host     %s\n  port     %s\n  database %s\n  user     %s\n  password %s\n",
     $cfg['host'], $cfg['port'], $cfg['db'], $cfg['user'], $pass === '' ? '(empty!)' : '(set, ' . strlen($pass) . ' chars)');
-printf("  APP_KEY  %s\n  DEMO_MODE %s · MYKID_ENV %s\n\n",
-    strlen((string) mk_env('APP_KEY', '')) >= 32 ? 'OK' : 'MISSING / too short (need 32+ chars)', mk_env('DEMO_MODE', '0'), MYKID_ENV);
+printf("  APP_KEY  %s\n  MYKID_ENV %s\n\n",
+    strlen((string) mk_env('APP_KEY', '')) >= 32 ? 'OK' : 'MISSING / too short (need 32+ chars)', MYKID_ENV);
 
 $started = microtime(true);
 try {

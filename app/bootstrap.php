@@ -6,7 +6,7 @@
  *   app/config/     app.php (features, roles, navigation), permissions.php, cctv-permissions.php
  *   app/lib/        engine: db, store, security, router, auth, permissions, components, ...
  *   app/pages/      one file per screen (rendered by the router, see app/routes.php)
- *   database/       schema.sql, install.php, seeds/ (demo source data)
+ *   database/       schema.sql, install.php (creates the school + first admin), check.php
  *   public/         web root — only index.php (front controller) and assets/ are served
  *   storage/        uploads/ (private image files, streamed by /media/{token})
  */
@@ -43,12 +43,9 @@ function has_feature(string $feature): bool
     return in_array($feature, pkg()['modules'], true);
 }
 
-require_once MK_ROOT . '/database/seeds/base-data.php'; // shared source data (read-only)
 require_once MK_LIB . '/catalog.php';
 require_once MK_LIB . '/schema.php';
-require_once MK_LIB . '/seed.php';
-require_once MK_ROOT . '/database/seeds/mock-data.php';
-require_once MK_ROOT . '/database/seeds/cctv-data.php';
+require_once MK_LIB . '/daily.php';
 require_once MK_LIB . '/store.php';
 require_once MK_LIB . '/id-token.php';
 require_once MK_LIB . '/permissions.php';

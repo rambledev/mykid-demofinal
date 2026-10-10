@@ -2,6 +2,7 @@
 
 รูปแบบ: Context → Decision → Alternatives → Consequences · สถานะ: `Locked` (ยืนยันโดยเจ้าของโครงการ), `Accepted` (ตาม stack/ข้อกำหนดที่ล็อก), `Proposed` (ข้อเสนอเชิงเทคนิค รอทีมตรวจ)
 
+> Revision 0.7 (2026-10-10): **ADR-023** — ตัดข้อมูลและฟีเจอร์ demo ออกทั้งหมด
 > Revision 0.6 (2026-10-10): **ADR-022** — ตัด role Super Admin (โรงเรียนเดียว)
 > Revision 0.5 (2026-10-10): **ADR-021** — public/ web root + router + Clean URL, Secure ID Token, security baseline ([../security.md](../security.md))
 > Revision 0.4 (2026-10-10): **ADR-020** — พัฒนาต่อจากโปรเจกต์นี้ (`mykid-demofinal`) ด้วย PHP ธรรมดา + MariaDB → ADR-001, ADR-002, ADR-014 เป็น `Superseded`
@@ -175,6 +176,14 @@
 - **Decision**: role เหลือ Admin · Executive · Teacher · Parent; `multiSchool = false`; หน้า `/super-admin/*` และ scope `platform` ถูกลบ;
   การจัดการบัญชี Admin / ผู้บริหารย้ายมาที่ `/admin/users` (Admin ของโรงเรียน — แก้/ลบได้เฉพาะบัญชี admin/executive, ห้ามลบหรือเปลี่ยนบทบาทบัญชีตัวเอง)
 - **Consequences**: การเพิ่มโรงเรียนใหม่ทำผ่านฐานข้อมูล/seed เท่านั้น; ข้อมูล schema ยังมี `school_id` ทุกตารางจึงขยายเป็นหลายโรงเรียนได้ภายหลัง
+
+### ADR-023 — ไม่มีข้อมูล demo ในระบบ · `Locked` (2026-10-10)
+- **Context**: เจ้าของโครงการจะใช้ระบบจริง โดย Admin บันทึกข้อมูลเอง — ไม่ต้องการข้อมูล/ฟีเจอร์ demo
+- **Decision**: ลบ seed ทั้งหมด (โรงเรียน/ห้อง/ครู/นักเรียน/บัญชี/กล้อง/รูปตัวอย่าง), `DEMO_MODE`, การเข้าระบบด้วยการ์ด, รายการบัญชีทดลอง,
+  ปุ่ม "รีเซ็ตข้อมูล Demo", การสุ่มข้อมูลรายวัน, ตัวเลขจำลองในรายงาน/กราฟ, ภาพกล้องจำลอง; ไม่มีการ reseed อัตโนมัติอีก
+  · ตั้งค่าครั้งแรกด้วย `php database/install.php --school=... --admin-phone=... --admin-pin=...` (โรงเรียน + Admin คนแรก)
+  · วันใหม่ = เปิดใบงานประจำวันแบบว่างให้นักเรียนแต่ละคน (ครูกรอกเอง)
+- **Consequences**: บัญชีครู/ผู้ปกครองต้องมีช่องทางสร้างจากฝั่ง Admin (งานถัดไป)
 
 ## Locked Decisions (สรุป)
 **PHP 8.3+ (ไม่ใช้ framework) · MariaDB 11.4 LTS ตาม ADR-020** · Docker + Coolify · Server-rendered HTML + Vanilla JS · Asia/Bangkok ·

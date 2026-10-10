@@ -7,18 +7,19 @@
  * Writes: store_mutate($mutator) runs inside a transaction holding a global row lock
  *         (app_meta 'lock' FOR UPDATE): it loads every table, lets the mutator change the
  *         state array, then writes only the difference (INSERT / UPDATE / DELETE by id).
- *         store_insert / store_update / store_delete / store_reset_scope build on it.
- * Meta:   app_meta keeps schema, seedDate, version (bumped on every write — the client polls
- *         it to refresh), updatedAt and nextId (global id sequence used by the seed and writes).
+ *         store_insert / store_update / store_delete build on it. Every write also opens today's
+ *         empty daily sheets for students who do not have them yet (daily.php).
+ * Meta:   app_meta keeps schema, seedDate (= the last day the daily sheets were opened), version
+ *         (bumped on every write — the client polls it to refresh), updatedAt and nextId (global id
+ *         sequence for new rows).
  *
- * Business rule (Demo Final): data is NEVER deleted automatically. On a new day the state is
- * rolled forward (seed_roll_day appends today's records); a full reseed only happens when the
- * database is empty / the schema version changes, or when an admin presses "รีเซ็ตข้อมูล Demo".
+ * Data is NEVER created, reset or deleted automatically — no demo data, no reseed. An empty database
+ * is set up with `php database/install.php` (school + first admin account).
  * Callers must authorise first (permissions.php); the store only reads/writes rows.
  */
 declare(strict_types=1);
 
-final class DemoValidationException extends InvalidArgumentException
+final class ValidationException extends InvalidArgumentException
 {
 }
 
@@ -26,7 +27,7 @@ final class PermissionDeniedException extends RuntimeException
 {
 }
 
-const MK_STORE_SCHEMA = 6; // bump when the seed shape changes (forces a reseed) — 6: parentStudents, userNotifications, new pickup flow
+const MK_STORE_SCHEMA = 7; // data format version (recorded in app_meta; table changes go through database/schema.sql)
 
 /** Tables read newest first (the app prepends new rows to them). */
 const MK_STORE_DESC = ['statuses' => true];
@@ -35,28 +36,6 @@ const MK_STORE_DESC = ['statuses' => true];
 function store_tables(): array
 {
     return array_keys(mk_tables());
-}
-
-function store_seed(): array
-{
-    mk_log('Store', 'store_seed START');
-    $seed = pkg_seed();
-    foreach ($seed['tables']['users'] as &$u) { // demo PINs are hashed before they reach the database
-        if (!str_starts_with((string) $u['pin'], '$')) {
-            $u['pin'] = pin_hash((string) $u['pin']);
-        }
-    }
-    unset($u);
-    $state = [
-        'schema'    => MK_STORE_SCHEMA,
-        'seedDate'  => today(),
-        'version'   => 1,
-        'updatedAt' => date('c'),
-        'nextId'    => $seed['nextId'],
-        'tables'    => $seed['tables'],
-    ];
-    mk_log('Store', 'store_seed END', array_map('count', $seed['tables']));
-    return $state;
 }
 
 /** app_meta as typed values (schema, seedDate, version, updatedAt, nextId). */
@@ -85,9 +64,9 @@ function store_state(?array $replace = null): array
     if ($meta !== null) {
         return $meta;
     }
-    $meta = store_load_meta(mk_db()); // cached first, so nested calls during the seed below do not recurse
+    $meta = store_load_meta(mk_db()); // cached first, so nested calls during the write below do not recurse
     if ($meta['schema'] !== MK_STORE_SCHEMA || $meta['seedDate'] !== today()) {
-        mk_log('Store', 'state missing (seed) or from an earlier day (roll forward)', ['schema' => $meta['schema'], 'seedDate' => $meta['seedDate']]);
+        mk_log('Store', 'new day (open daily sheets) or new data format', ['schema' => $meta['schema'], 'seedDate' => $meta['seedDate']]);
         store_mutate(fn (array &$s) => null); // replaces $meta through store_state($state)
     }
     return $meta;
@@ -114,7 +93,7 @@ function store_rows(string $table): array
     if ($cached !== null) {
         return $cached;
     }
-    store_state(); // seed / roll forward first
+    store_state(); // open today's daily sheets first
     return store_rows_cache($table, store_select($table));
 }
 
@@ -190,7 +169,7 @@ function store_to_db(string $table, array $row, array $columns): array
 function store_mutate(callable $mutator): array
 {
     mk_log('Store', 'store_mutate START');
-    store_state(); // seed / roll forward in its own transaction before this write
+    store_state(); // open today's sheets in its own transaction before this write
     $pdo = mk_db();
     $pdo->beginTransaction();
     try {
@@ -202,12 +181,10 @@ function store_mutate(callable $mutator): array
         }
         $state = store_load_meta($pdo) + ['tables' => $original];
 
-        if ($state['schema'] !== MK_STORE_SCHEMA) {
-            $state = store_seed(); // empty database or new schema version
-        } elseif ($state['seedDate'] !== today()) {
-            seed_roll_day($state); // new day: append, never delete
-        }
+        $state['schema'] = MK_STORE_SCHEMA; // never reseeds: table changes are migrations in schema.sql
         $result = $mutator($state);
+        daily_sheets_fill($state); // new day / new student → today's empty records
+        $state['seedDate'] = today();
         $state['version']++;
         $state['updatedAt'] = date('c');
 
@@ -219,7 +196,7 @@ function store_mutate(callable $mutator): array
         $pdo->commit();
     } catch (Throwable $e) {
         $pdo->rollBack();
-        if (!$e instanceof DemoValidationException && !$e instanceof PermissionDeniedException) {
+        if (!$e instanceof ValidationException && !$e instanceof PermissionDeniedException) {
             error_log('[Mykid][Store][store_mutate] ERROR ' . $e->getMessage());
         }
         throw $e;
@@ -315,7 +292,7 @@ function store_update(string $table, int $id, array $changes, callable $guard): 
     store_mutate(function (array &$state) use ($table, $id, $changes, $guard) {
         $index = store_find($state, $table, $id);
         if ($index === null) {
-            throw new DemoValidationException('ไม่พบข้อมูลนี้ อาจถูกลบไปแล้ว');
+            throw new ValidationException('ไม่พบข้อมูลนี้ อาจถูกลบไปแล้ว');
         }
         $guard($state['tables'][$table][$index]);
         $state['tables'][$table][$index] = array_merge($state['tables'][$table][$index], $changes);
@@ -328,24 +305,9 @@ function store_delete(string $table, int $id, callable $guard): void
     store_mutate(function (array &$state) use ($table, $id, $guard) {
         $index = store_find($state, $table, $id);
         if ($index === null) {
-            throw new DemoValidationException('ไม่พบข้อมูลนี้ อาจถูกลบไปแล้ว');
+            throw new ValidationException('ไม่พบข้อมูลนี้ อาจถูกลบไปแล้ว');
         }
         $guard($state['tables'][$table][$index]);
         array_splice($state['tables'][$table], $index, 1);
-    });
-}
-
-/** Restore seed rows for which $inScope(table, row) is true (reset only the user's own scope). */
-function store_reset_scope(callable $inScope): void
-{
-    mk_log('Store', 'store_reset_scope START');
-    store_mutate(function (array &$state) use ($inScope) {
-        $seed = store_seed();
-        foreach ($seed['tables'] as $table => $rows) {
-            $keep = array_filter($state['tables'][$table] ?? [], fn ($row) => !$inScope($table, $row));
-            $fresh = array_filter($rows, fn ($row) => $inScope($table, $row));
-            $state['tables'][$table] = array_values(array_merge($fresh, $keep));
-        }
-        $state['nextId'] = max($state['nextId'], $seed['nextId']);
     });
 }

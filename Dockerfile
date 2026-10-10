@@ -3,7 +3,7 @@
 # The app is plain PHP (no framework, no Composer, no Node.js) + MariaDB via PDO. Built-in extensions
 # cover mbstring, json, session, hash, pcre and fileinfo; pdo_mysql is added for MariaDB and GD
 # (JPEG/PNG/WebP) for image resizing. Database settings come from env vars: DB_HOST, DB_PORT,
-# DB_NAME, DB_USER, DB_PASS (tables are created + seeded on the first request).
+# DB_NAME, DB_USER, DB_PASS. First setup: `php database/install.php --school=... --admin-phone=... --admin-pin=...`.
 # Uploaded images are written to storage/uploads — mount a volume on storage/ to keep them.
 
 FROM php:8.3-apache
@@ -52,11 +52,9 @@ CMD ["apache2-foreground"]
 # App mode: "production" turns off developer logs (PHP error_log + browser console).
 # Override in Coolify with MYKID_ENV=development when debugging.
 # Required in Coolify: DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASS, APP_KEY (32+ random chars).
-# DEMO_MODE=1 enables the one-tap demo accounts (testing only).
 # TRUST_PROXY=1: the app runs behind Coolify's Traefik, so the client IP (login throttling) is read
 # from X-Forwarded-For. Set it to 0 if the container is ever exposed without a proxy.
 ENV MYKID_ENV=production \
-    DEMO_MODE=0 \
     TRUST_PROXY=1
 
 EXPOSE 80

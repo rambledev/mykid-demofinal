@@ -116,7 +116,7 @@ function apply_write_scope(array $user, string $table, array $data): array
         } elseif (in_array($level, ['targeted', 'camera'], true)) {
             $data['classroom_id'] = null; // school-wide / common area
         } else {
-            throw new DemoValidationException('กรุณาเลือกห้องเรียน');
+            throw new ValidationException('กรุณาเลือกห้องเรียน');
         }
     }
 

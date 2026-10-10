@@ -114,7 +114,7 @@ function pickup_create(array $user, int $studentId): array
     $created = store_mutate(function (array &$state) use ($row, $student) {
         foreach ($state['tables']['pickups'] ?? [] as $p) {
             if ($p['student_id'] === $row['student_id'] && $p['date'] === $row['date']) {
-                throw new DemoValidationException($p['status'] === 'completed' ? 'วันนี้ส่งมอบนักเรียนเรียบร้อยแล้ว' : 'แจ้งครูไว้แล้ว กรุณารอการอัปเดตจากครู');
+                throw new ValidationException($p['status'] === 'completed' ? 'วันนี้ส่งมอบนักเรียนเรียบร้อยแล้ว' : 'แจ้งครูไว้แล้ว กรุณารอการอัปเดตจากครู');
             }
         }
         $row = ['id' => $state['nextId']++] + $row;
@@ -137,7 +137,7 @@ function pickup_advance(array $user, int $id, string $to): array
         $row = $index === null ? null : $state['tables']['pickups'][$index];
         authorize($row !== null && row_in_scope($user, 'pickups', $row), 'ไม่มีสิทธิ์จัดการการรับ-ส่งของนักเรียนคนนี้', ['user' => $user['id'], 'id' => $id]);
         if ((PICKUP_FLOW[$row['status']] ?? null) !== $to) {
-            throw new DemoValidationException('สถานะมีการเปลี่ยนแปลงแล้ว กรุณาลองใหม่อีกครั้ง');
+            throw new ValidationException('สถานะมีการเปลี่ยนแปลงแล้ว กรุณาลองใหม่อีกครั้ง');
         }
         $row['status'] = $to;
         $row[PICKUP_TIME_COLUMN[$to]] = date('Y-m-d H:i:s');

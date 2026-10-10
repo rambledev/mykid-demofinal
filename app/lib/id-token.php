@@ -81,7 +81,7 @@ function untok_or_fail(string $table, mixed $token): int
     $id = untok($table, $token);
     if ($id === null) {
         mk_log('IdToken', 'invalid token', ['table' => $table]);
-        throw new DemoValidationException('ไม่พบข้อมูลที่ต้องการ');
+        throw new ValidationException('ไม่พบข้อมูลที่ต้องการ');
     }
     return $id;
 }

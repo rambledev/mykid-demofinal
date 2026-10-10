@@ -118,12 +118,6 @@ function thai_duration(int $minutes): string
     return trim(($h ? $h . ' ชั่วโมง ' : '') . ($m ? $m . ' นาที' : ''));
 }
 
-/** Deterministic pseudo-random int for mock data. */
-function mk_rand(int|string ...$parts): int
-{
-    return crc32(implode('|', $parts)) & 0x7fffffff;
-}
-
 function percent(int|float $part, int|float $total): int
 {
     return $total > 0 ? (int) round($part * 100 / $total) : 0;

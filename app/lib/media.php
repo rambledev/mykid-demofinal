@@ -149,30 +149,30 @@ function uploaded_files(string $field = 'images'): array
 function validate_image_upload(array $file): array
 {
     if ($file['error'] !== UPLOAD_ERR_OK) {
-        throw new DemoValidationException(in_array($file['error'], [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)
+        throw new ValidationException(in_array($file['error'], [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)
             ? 'ไฟล์รูปภาพมีขนาดใหญ่เกินไป' : 'อัปโหลดไฟล์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
     }
     if (!is_uploaded_file($file['tmp_name'])) {
-        throw new DemoValidationException('ไม่พบไฟล์ที่อัปโหลด');
+        throw new ValidationException('ไม่พบไฟล์ที่อัปโหลด');
     }
     if ($file['size'] <= 0 || $file['size'] > MEDIA_MAX_UPLOAD_BYTES) {
-        throw new DemoValidationException('รูปภาพต้องมีขนาดไม่เกิน ' . human_bytes(MEDIA_MAX_UPLOAD_BYTES));
+        throw new ValidationException('รูปภาพต้องมีขนาดไม่เกิน ' . human_bytes(MEDIA_MAX_UPLOAD_BYTES));
     }
 
     $name = strtolower((string) $file['name']);
     $ext = pathinfo($name, PATHINFO_EXTENSION);
     if (!in_array($ext, MEDIA_ALLOWED_EXT, true) || preg_match('/\.(php\d?|phtml|phar|pht|cgi|pl|py|sh|exe|bat|js|html?|svg)(\.|$)/', $name)) {
-        throw new DemoValidationException('รองรับเฉพาะไฟล์รูปภาพ JPG, PNG หรือ WebP');
+        throw new ValidationException('รองรับเฉพาะไฟล์รูปภาพ JPG, PNG หรือ WebP');
     }
 
     $mime = (new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']) ?: '';
     $info = @getimagesize($file['tmp_name']);
     if (!isset(MEDIA_ALLOWED[$mime]) || $info === false || ($info['mime'] ?? '') !== $mime) {
         mk_log('Media', 'REJECTED upload', ['name' => $file['name'], 'mime' => $mime]);
-        throw new DemoValidationException('ไฟล์นี้ไม่ใช่รูปภาพที่รองรับ (JPG, PNG, WebP)');
+        throw new ValidationException('ไฟล์นี้ไม่ใช่รูปภาพที่รองรับ (JPG, PNG, WebP)');
     }
     if ($info[0] < 1 || $info[1] < 1 || $info[0] * $info[1] > 36_000_000) { // ≤ 36 MP keeps GD within memory_limit
-        throw new DemoValidationException('รูปภาพมีความละเอียดสูงเกินไป กรุณาใช้รูปไม่เกิน 36 ล้านพิกเซล');
+        throw new ValidationException('รูปภาพมีความละเอียดสูงเกินไป กรุณาใช้รูปไม่เกิน 36 ล้านพิกเซล');
     }
     return [$mime, (int) $info[0], (int) $info[1]];
 }
@@ -194,7 +194,7 @@ function optimise_image(string $source, string $mime, int $width, int $height): 
         'image/webp' => @imagecreatefromwebp($source),
     };
     if (!$img) {
-        throw new DemoValidationException('ไม่สามารถอ่านไฟล์รูปภาพได้');
+        throw new ValidationException('ไม่สามารถอ่านไฟล์รูปภาพได้');
     }
     $scale = min(1, MEDIA_MAX_DIMENSION / max($width, $height));
     $w = max(1, (int) round($width * $scale));
@@ -239,7 +239,7 @@ function write_media_file(int $schoolId, string $ext, string $bytes): string
 function attach_uploaded_images(string $ownerType, array $owner, array $user, array $files, ?string $meal = null): array
 {
     if (count($files) > MEDIA_MAX_FILES) {
-        throw new DemoValidationException('อัปโหลดได้ครั้งละไม่เกิน ' . MEDIA_MAX_FILES . ' รูป');
+        throw new ValidationException('อัปโหลดได้ครั้งละไม่เกิน ' . MEDIA_MAX_FILES . ' รูป');
     }
     $prepared = [];
     foreach ($files as $file) { // validate everything before writing anything
@@ -305,127 +305,4 @@ function cleanup_expired_media(array $user): array
     });
     mk_log('Media', 'cleanup_expired_media', ['user' => $user['id'], 'school' => $user['school_id']] + $result);
     return $result;
-}
-
-/* ============================================================================
- * Demo seed images (cartoon scenes drawn with GD — no real photos of children)
- * ========================================================================= */
-
-/** Create (once) a demo JPEG under uploads/seed/ and return its file metadata. */
-function media_seed_file(string $key, int $variant): array
-{
-    $relative = 'seed/' . preg_replace('/[^a-z0-9\-]/', '', $key) . '.jpg';
-    $path = media_root() . '/' . $relative;
-    if (!is_file($path)) {
-        if (!is_dir(dirname($path))) {
-            mkdir(dirname($path), 0775, true);
-        }
-        file_put_contents($path, media_seed_jpeg($variant));
-    }
-    $size = @getimagesize($path) ?: [800, 600];
-    return ['file_path' => $relative, 'file_size' => (int) filesize($path), 'mime_type' => 'image/jpeg', 'width' => $size[0], 'height' => $size[1]];
-}
-
-function media_seed_jpeg(int $variant): string
-{
-    if (!function_exists('imagecreatetruecolor')) {
-        return base64_decode('/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AKp//2Q==');
-    }
-    [$w, $h] = [800, 600];
-    $im = imagecreatetruecolor($w, $h);
-    $c = fn (string $hex) => imagecolorallocate($im, hexdec(substr($hex, 1, 2)), hexdec(substr($hex, 3, 2)), hexdec(substr($hex, 5, 2)));
-    $palettes = [
-        ['#DFF4FF', '#8FD9A8', '#FF9EC0', '#FFD66B'], ['#FFF4CC', '#FFC4C4', '#7CC6F2', '#8FD9A8'],
-        ['#FFEAF2', '#B79CFF', '#FFC94D', '#7CC6F2'], ['#E6F7EE', '#7CC6F2', '#FF9F7A', '#FFD66B'],
-        ['#F1EAFF', '#FFD66B', '#FF9EC0', '#8FD9A8'], ['#FFE9D6', '#FF9F7A', '#7CC6F2', '#B79CFF'],
-    ];
-    [$bg, $a, $b, $d] = array_map($c, $palettes[$variant % 6]);
-    imagefilledrectangle($im, 0, 0, $w, $h, $bg);
-    imagefilledrectangle($im, 0, (int) ($h * .72), $w, $h, $a);            // ground / table
-    imagefilledellipse($im, 650, 120, 130, 130, $d);                       // sun / lamp
-    for ($i = 0; $i < 7; $i++) {                                           // toys / food / paint blobs
-        $x = 90 + $i * 100 + ($variant * 37) % 40;
-        $y = 300 + (($i * 53 + $variant * 29) % 120);
-        imagefilledellipse($im, $x, $y, 70 + ($i % 3) * 20, 70 + ($i % 2) * 25, $i % 2 ? $b : $d);
-    }
-    imagefilledrectangle($im, 120, 150, 330, 300, $b);                     // block / plate / frame
-    imagefilledpolygon($im, [100, 160, 225, 70, 350, 160], $d);
-    for ($i = 0; $i < 4000; $i++) {                                        // light "photo" grain
-        imagesetpixel($im, random_int(0, $w - 1), random_int(0, $h - 1), $c('#FFFFFF'));
-    }
-    imagestring($im, 3, 16, $h - 24, 'MYKID DEMO IMAGE #' . $variant, $c('#2F3A56'));
-    ob_start();
-    imagejpeg($im, null, 72);
-    imagedestroy($im);
-    return (string) ob_get_clean();
-}
-
-/**
- * Seed media rows: per classroom — activity images (today, 2 days ago, ~7 months ago = expired,
- * one already-cleaned = deleted), food images (today, yesterday, ~7 months ago) and portfolio
- * images for the first 3 children (recent + one old expired work).
- */
-function seed_media(array &$t, int &$nextId): void
-{
-    $at = fn (string $date, string $time) => "$date $time";
-    $add = function (array $owner, string $type, string $uploadedAt, string $key, int $variant, ?int $studentId = null, bool $deleted = false) use (&$t, &$nextId) {
-        $file = $deleted ? ['file_path' => 'seed/removed-' . $key . '.jpg', 'file_size' => 184320 + $variant * 1000, 'mime_type' => 'image/jpeg', 'width' => 800, 'height' => 600]
-            : media_seed_file($key, $variant);
-        $t['mediaFiles'][] = ['id' => $nextId++, 'school_id' => $owner['school_id'], 'classroom_id' => $owner['classroom_id'] ?? null,
-            'student_id' => $studentId, 'owner_type' => $type, 'owner_id' => $owner['id']] + $file + [
-            'uploaded_at' => $uploadedAt, 'expires_at' => media_expires_at($uploadedAt),
-            'deleted_at' => $deleted ? date('Y-m-d H:i:s', strtotime($uploadedAt . ' +6 months +3 days')) : null,
-            'image_status' => $deleted ? 'deleted' : 'available', 'uploaded_by' => null];
-    };
-    $old = date('Y-m-d', strtotime('-' . SEED_OLD_DAYS . ' day'));
-    $dates = ['today' => today(), 'd1' => date('Y-m-d', strtotime('-1 day')), 'd2' => date('Y-m-d', strtotime('-2 day')), 'old' => $old];
-
-    foreach ($t['classrooms'] as $room) {
-        $cid = $room['id'];
-        $acts = fn (string $date) => array_values(array_filter($t['activities'], fn ($a) => $a['classroom_id'] === $cid && $a['date'] === $date));
-        $art = fn (array $list) => $list[2] ?? $list[0]; // the 10:00 activity (art / music / science)
-
-        $today = $acts($dates['today']);
-        if ($today) {
-            $add($art($today), 'activity', $at($dates['today'], '10:25:00'), "act-$cid-t1", $cid);
-            $add($art($today), 'activity', $at($dates['today'], '10:31:00'), "act-$cid-t2", $cid + 1);
-            $add($today[5] ?? $today[0], 'activity', $at($dates['today'], '14:20:00'), "act-$cid-t3", $cid + 2);
-        }
-        if ($d2 = $acts($dates['d2'])) {
-            $add($art($d2), 'activity', $at($dates['d2'], '10:40:00'), "act-$cid-d2", $cid + 3);
-        }
-        if ($o = $acts($dates['old'])) {
-            $add($art($o), 'activity', $at($dates['old'], '10:30:00'), "act-$cid-o1", $cid + 4);
-            $add($art($o), 'activity', $at($dates['old'], '10:35:00'), "act-$cid-o2", $cid + 5);
-            $add($o[5] ?? $o[0], 'activity', $at($dates['old'], '14:10:00'), "act-$cid-o3", $cid, null, true);
-        }
-
-        foreach (['today' => '11:05:00', 'd1' => '11:10:00', 'old' => '11:00:00'] as $k => $time) {
-            foreach ($t['foodMenus'] as $menu) {
-                if ($menu['classroom_id'] === $cid && $menu['date'] === $dates[$k]) {
-                    $add($menu, 'food', $at($dates[$k], $time), "food-$cid-$k", $cid + 7);
-                }
-            }
-        }
-
-        // Children with work images: the first 3 of each room + children of multi-child demo parents.
-        $siblings = array_merge(...array_map(fn ($u) => count($u['children'] ?? []) > 1 ? $u['children'] : [], $t['users']));
-        $roomKids = array_values(array_filter($t['students'], fn ($s) => $s['classroom_id'] === $cid));
-        $kids = array_merge(array_slice($roomKids, 0, 3), array_values(array_filter($roomKids, fn ($s) => in_array($s['id'], $siblings, true))));
-        foreach ($kids as $i => $kid) {
-            $works = array_values(array_filter($t['portfolio'], fn ($p) => $p['student_id'] === $kid['id']));
-            foreach (array_slice($works, 0, 2) as $j => $work) {
-                $add($work, 'portfolio', $at($work['date'], '15:00:00'), "work-{$kid['id']}-$j", $kid['id'] + $j, $kid['id']);
-                if ($j === 0) { // the first work of each child has several images (gallery demo)
-                    $add($work, 'portfolio', $at($work['date'], '15:01:00'), "work-{$kid['id']}-{$j}b", $kid['id'] + 4, $kid['id']);
-                }
-            }
-            $oldWork = ['id' => $nextId++, 'school_id' => $kid['school_id'], 'classroom_id' => $cid, 'student_id' => $kid['id'],
-                'date' => $old, 'title' => 'ภาพวาดบ้านของฉัน (ภาคเรียนที่แล้ว)', 'category' => 'art', 'art' => $kid['id'] % 6,
-                'comment' => 'ผลงานจากภาคเรียนที่แล้ว'];
-            $t['portfolio'][] = $oldWork;
-            $add($oldWork, 'portfolio', $at($old, '15:00:00'), "work-{$kid['id']}-old", $kid['id'] + 3, $kid['id']);
-        }
-    }
-    mk_log('Media', 'seed_media', ['rows' => count($t['mediaFiles'])]);
 }
