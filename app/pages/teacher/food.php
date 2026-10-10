@@ -32,7 +32,7 @@ page_title('🍱', 'เมนูอาหารวันนี้', thai_date() 
                         <?php foreach (mk_catalog()['meals'] as $m): ?>
                             <td>
                                 <?php if ($row): ?>
-                                    <select class="input input--sm" data-intake-id="<?= $row['id'] ?>" data-meal="<?= e($m['meal']) ?>" aria-label="<?= e($s['nickname'] . ' ' . $m['label']) ?>">
+                                    <select class="input input--sm" data-intake-id="<?= e(tok('foodIntake', $row['id'])) ?>" data-meal="<?= e($m['meal']) ?>" aria-label="<?= e($s['nickname'] . ' ' . $m['label']) ?>">
                                         <?php foreach (mk_catalog()['intake'] as $lv): ?>
                                             <option value="<?= e($lv['code']) ?>"<?= ($row['levels'][$m['meal']] ?? '') === $lv['code'] ? ' selected' : '' ?>><?= $lv['emoji'] ?> <?= e($lv['label']) ?></option>
                                         <?php endforeach; ?>

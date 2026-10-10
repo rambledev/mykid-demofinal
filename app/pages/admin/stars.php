@@ -40,11 +40,11 @@ page_title('⭐', 'ดาวสะสมทั้งโรงเรียน', $
     </div>
     <section class="card">
         <?php section_head('🕘', 'ประวัติการให้ดาวล่าสุด'); ?>
-        <?php filter_bar('stars', array_column(array_map(fn ($r) => ['k' => $r['id'], 'v' => $r['emoji'] . ' ' . $r['name']], $rooms), 'v', 'k'), 'ค้นหาชื่อนักเรียนหรือเหตุผล...'); ?>
+        <?php filter_bar('stars', array_column(array_map(fn ($r) => ['k' => tok('classrooms', $r['id']), 'v' => $r['emoji'] . ' ' . $r['name']], $rooms), 'v', 'k'), 'ค้นหาชื่อนักเรียนหรือเหตุผล...'); ?>
         <ol class="star-history" data-filter-list="stars">
             <?php foreach (array_slice($stars, 0, 120) as $r): ?>
                 <?php $s = find_row('students', $r['student_id']); ?>
-                <li data-filter-item data-group="<?= (int) $r['classroom_id'] ?>" data-search="<?= e(($s['nickname'] ?? '') . ' ' . $r['reason']) ?>">
+                <li data-filter-item data-group="<?= e(tok('classrooms', $r['classroom_id'])) ?>" data-search="<?= e(($s['nickname'] ?? '') . ' ' . $r['reason']) ?>">
                     <span class="star-history__points">+<?= (int) $r['points'] ?> ⭐</span><span><?= e($s['nickname'] ?? '') ?> · <?= e($r['reason']) ?></span><time><?= e(thai_short_date($r['date'])) ?></time></li>
             <?php endforeach; ?>
         </ol>

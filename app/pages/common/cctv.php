@@ -73,13 +73,13 @@ if ($manage) {
                             <td><?= e($pub['streamLabel']) ?><?= $camera['stream_url'] ? '' : '<br><small>ยังไม่ตั้งค่า URL</small>' ?></td>
                             <td><?= $camera['rtsp_url'] ? '<span class="tone tone--good">🔐 ตั้งค่าแล้ว</span>' : '<span class="tone tone--neutral">ยังไม่ตั้งค่า</span>' ?></td>
                             <td>
-                                <button type="button" class="att-chip att-chip--<?= $active ? 'good' : 'neutral' ?> is-on" data-action="quick-save" data-table="cameras" data-id="<?= $camera['id'] ?>" data-field="is_active" data-value="<?= $active ? '0' : '1' ?>" aria-label="<?= $active ? 'ปิดใช้งาน' : 'เปิดใช้งาน' ?> <?= e($camera['code']) ?>">
+                                <button type="button" class="att-chip att-chip--<?= $active ? 'good' : 'neutral' ?> is-on" data-action="quick-save" data-table="cameras" data-id="<?= e(tok('cameras', $camera['id'])) ?>" data-field="is_active" data-value="<?= $active ? '0' : '1' ?>" aria-label="<?= $active ? 'ปิดใช้งาน' : 'เปิดใช้งาน' ?> <?= e($camera['code']) ?>">
                                     <?= $active ? '✅ Active' : '⏸️ ปิดอยู่' ?>
                                 </button>
                             </td>
                             <td class="cctv-table__actions">
                                 <button type="button" class="btn btn--soft btn--sm" data-action="cctv-open" data-camera="<?= json_attr($pub) ?>">ดู</button>
-                                <button type="button" class="btn btn--soft btn--sm" data-action="open-form" data-table="cameras" data-record="<?= json_attr(camera_admin_record($camera)) ?>"><?= icon('edit') ?> แก้ไข</button>
+                                <button type="button" class="btn btn--soft btn--sm" data-action="open-form" data-table="cameras" data-record="<?= json_attr(public_row('cameras', camera_admin_record($camera))) ?>"><?= icon('edit') ?> แก้ไข</button>
                             </td>
                         </tr>
                     <?php endforeach; ?>

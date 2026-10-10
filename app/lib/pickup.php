@@ -78,7 +78,7 @@ function pickup_public(array $p): array
 {
     $meta = pickup_status_meta($p['status']);
     return [
-        'id' => $p['id'], 'student_id' => $p['student_id'], 'status' => $p['status'],
+        'id' => tok('pickups', $p['id']), 'student_id' => tok('students', $p['student_id']), 'status' => $p['status'],
         'label' => $meta['emoji'] . ' ' . $meta['label'], 'message' => $meta['parent'],
         'requested_at' => pickup_hm($p['requested_at']), 'completed_at' => pickup_hm($p['completed_at'] ?? null),
     ];

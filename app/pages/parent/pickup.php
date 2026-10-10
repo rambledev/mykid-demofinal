@@ -22,7 +22,7 @@ page_title('🚸', 'รับ-ส่งนักเรียน', thai_date() . 
         $reached = $p ? array_search($p['status'], $order, true) : -1;
         $room = find_row('classrooms', $child['classroom_id']);
         ?>
-        <section class="card pickup-card<?= $p ? ' pickup-card--' . e($p['status']) : '' ?>" data-child="<?= $child['id'] ?>">
+        <section class="card pickup-card<?= $p ? ' pickup-card--' . e($p['status']) : '' ?>" data-child="<?= e(tok('students', $child['id'])) ?>">
             <div class="pickup-card__child">
                 <?= student_avatar($child, 'md') ?>
                 <div>
@@ -32,7 +32,7 @@ page_title('🚸', 'รับ-ส่งนักเรียน', thai_date() . 
             </div>
 
             <?php if (!$p): ?>
-                <button type="button" class="btn btn--primary btn--block pickup-go" data-action="pickup-go" data-student="<?= $child['id'] ?>" data-name="<?= e($child['nickname']) ?>">🚗 กำลังไปรับลูก</button>
+                <button type="button" class="btn btn--primary btn--block pickup-go" data-action="pickup-go" data-student="<?= e(tok('students', $child['id'])) ?>" data-name="<?= e($child['nickname']) ?>">🚗 กำลังไปรับลูก</button>
                 <p class="hint">เมื่อกดแล้ว ครูจะได้รับแจ้งว่าคุณกำลังเดินทางมารับนักเรียน</p>
             <?php else: ?>
                 <div class="pickup-state pickup-state--<?= e($p['status']) ?>" role="status">

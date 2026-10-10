@@ -14,12 +14,12 @@ $works = array_values(array_filter(store_rows('portfolio'), fn ($w) => isset($ch
 mk_header(['id' => 'parent-works', 'title' => 'ผลงานของฉัน', 'nav' => 'works']);
 page_title('🎨', 'ผลงานของฉัน', count($children) > 1 ? 'เลือกลูกเพื่อดูผลงาน' : 'ผลงานของ' . ($children[0]['nickname'] ?? ''));
 if (count($children) > 1) {
-    tab_bar('wchild', array_column(array_map(fn ($c) => ['k' => $c['id'], 'v' => $c['nickname']], $children), 'v', 'k'));
+    tab_bar('wchild', array_column(array_map(fn ($c) => ['k' => tok('students', $c['id']), 'v' => $c['nickname']], $children), 'v', 'k'));
 }
 ?>
 <div data-live id="live-works">
     <?php foreach ($children as $i => $child): ?>
-        <section class="card" data-tab-panel="wchild:<?= $child['id'] ?>"<?= $i ? ' hidden' : '' ?>>
+        <section class="card" data-tab-panel="wchild:<?= e(tok('students', $child['id'])) ?>"<?= $i ? ' hidden' : '' ?>>
             <div class="pickup-card__child work-child">
                 <?= student_avatar($child, 'md') ?>
                 <div><strong><?= e($child['nickname']) ?></strong><small><?= e($child['name']) ?></small></div>

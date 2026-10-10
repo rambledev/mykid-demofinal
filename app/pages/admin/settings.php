@@ -10,7 +10,7 @@ page_title('⚙️', 'ตั้งค่าพื้นฐาน', $user['school
 ?>
 <div data-live id="live-settings">
     <section class="card">
-        <?php section_head('🏫', 'ข้อมูลโรงเรียน', $settings ? '<button type="button" class="btn btn--soft btn--sm" data-action="open-form" data-table="settings" data-record="' . json_attr($settings) . '">' . icon('edit') . ' แก้ไข</button>' : ''); ?>
+        <?php section_head('🏫', 'ข้อมูลโรงเรียน', $settings ? '<button type="button" class="btn btn--soft btn--sm" data-action="open-form" data-table="settings" data-record="' . json_attr(public_row('settings', $settings)) . '">' . icon('edit') . ' แก้ไข</button>' : ''); ?>
         <ul class="menu-list">
             <li><span>📞 เบอร์โทร</span><strong><?= e($settings['phone'] ?? '-') ?></strong></li>
             <li><span>📍 ที่อยู่</span><strong><?= e($settings['address'] ?? '-') ?></strong></li>

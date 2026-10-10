@@ -22,7 +22,7 @@ page_title('💬', 'แชทกับผู้ปกครอง', 'เฉพ�
         <?php foreach ($students as $i => $s): ?>
             <?php $thread = $messages[$s['id']] ?? []; $last = end($thread) ?: null; ?>
             <li>
-                <button type="button" class="thread<?= $i === 0 ? ' is-active' : '' ?>" data-action="open-thread" data-thread="<?= $s['id'] ?>">
+                <button type="button" class="thread<?= $i === 0 ? ' is-active' : '' ?>" data-action="open-thread" data-thread="<?= e(tok('students', $s['id'])) ?>">
                     <?= student_avatar($s, 'sm') ?>
                     <span class="thread__text"><strong>ผู้ปกครอง<?= e($s['nickname']) ?></strong><small><?= e($last['text'] ?? 'ยังไม่มีข้อความ') ?></small></span>
                     <?php if ($last): ?><time><?= e(date('H:i', strtotime($last['at']))) ?></time><?php endif; ?>
@@ -32,7 +32,7 @@ page_title('💬', 'แชทกับผู้ปกครอง', 'เฉพ�
     </ul>
     <div class="chat-panels">
         <?php foreach ($students as $i => $s): ?>
-            <section class="chat-panel" data-thread-panel="<?= $s['id'] ?>"<?= $i === 0 ? '' : ' hidden' ?>>
+            <section class="chat-panel" data-thread-panel="<?= e(tok('students', $s['id'])) ?>"<?= $i === 0 ? '' : ' hidden' ?>>
                 <header class="chat-panel__head">
                     <button type="button" class="icon-btn chat-panel__back" data-action="close-thread" aria-label="กลับไปรายชื่อแชท"><?= icon('back') ?></button>
                     <?= student_avatar($s, 'sm') ?>

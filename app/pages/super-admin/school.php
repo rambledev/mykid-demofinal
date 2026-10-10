@@ -109,9 +109,9 @@ page_title($school['emoji'], $school['name'], ($school['province'] ?: '-') . ' �
 
         <section class="card dash-grid__wide">
             <?php section_head('🧒', 'นักเรียน', '<span class="count-badge">' . count($students) . ' คน</span>', 'แยกตามห้อง'); ?>
-            <?php tab_bar('rooms', array_column(array_map(fn ($r) => ['k' => $r['id'], 'v' => $r['emoji'] . ' ' . $r['name']], $rooms), 'v', 'k')); ?>
+            <?php tab_bar('rooms', array_column(array_map(fn ($r) => ['k' => tok('classrooms', $r['id']), 'v' => $r['emoji'] . ' ' . $r['name']], $rooms), 'v', 'k')); ?>
             <?php foreach ($rooms as $i => $room): ?>
-                <div data-tab-panel="rooms:<?= $room['id'] ?>"<?= $i ? ' hidden' : '' ?>><?php render_student_grid(where($students, 'classroom_id', $room['id'])); ?></div>
+                <div data-tab-panel="rooms:<?= e(tok('classrooms', $room['id'])) ?>"<?= $i ? ' hidden' : '' ?>><?php render_student_grid(where($students, 'classroom_id', $room['id'])); ?></div>
             <?php endforeach; ?>
         </section>
     </div>

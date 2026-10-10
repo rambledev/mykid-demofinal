@@ -130,7 +130,7 @@ function camera_public(array $camera): array
     $status = CAMERA_STATUSES[$camera['status']] ?? CAMERA_STATUSES['offline'];
     $room = $camera['classroom_id'] ? find_row('classrooms', $camera['classroom_id']) : null;
     return [
-        'id'          => $camera['id'],
+        'id'          => tok('cameras', $camera['id']),
         'code'        => $camera['code'],
         'name'        => $camera['name'],
         'location'    => $camera['location'],

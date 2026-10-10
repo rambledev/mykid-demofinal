@@ -24,12 +24,12 @@ page_title('🪐', 'ภาพรวมทุกโรงเรียน', 'Mykid
 <nav class="chip-row" aria-label="เลือกโรงเรียน" data-school-picker>
     <button type="button" class="chip-btn is-active" data-school-pick="all">🌐 ทุกโรงเรียน</button>
     <?php foreach ($schools as $s): ?>
-        <button type="button" class="chip-btn" data-school-pick="<?= $s['id'] ?>"><?= $s['emoji'] ?> <?= e($s['shortName']) ?></button>
+        <button type="button" class="chip-btn" data-school-pick="<?= e(tok('schools', $s['id'])) ?>"><?= $s['emoji'] ?> <?= e($s['shortName']) ?></button>
     <?php endforeach; ?>
 </nav>
 
 <?php foreach (['all' => $all] + $perSchool as $key => $n): ?>
-    <div class="kpi-grid" data-school-kpi="<?= $key ?>"<?= $key === 'all' ? '' : ' hidden' ?>>
+    <div class="kpi-grid" data-school-kpi="<?= e($key === 'all' ? 'all' : tok('schools', $key)) ?>"<?= $key === 'all' ? '' : ' hidden' ?>>
         <?= stat_card('🏫', 'โรงเรียน', $n['schools'], 'แห่ง') ?>
         <?= stat_card('👩‍🏫', 'ครู', $n['teachers'], 'คน') ?>
         <?= stat_card('👧', 'นักเรียน', $n['students'], 'คน') ?>
@@ -57,7 +57,7 @@ page_title('🪐', 'ภาพรวมทุกโรงเรียน', 'Mykid
     <?php section_head('🏫', 'โรงเรียนในระบบ', '<a class="btn btn--soft btn--sm" href="' . e(rurl('compare')) . '">เปรียบเทียบ</a> <a class="btn btn--soft btn--sm" href="' . e(rurl('schools')) . '">จัดการ</a>'); ?>
     <ul class="school-list">
         <?php foreach ($schools as $s): ?>
-            <li data-school-row="<?= $s['id'] ?>">
+            <li data-school-row="<?= e(tok('schools', $s['id'])) ?>">
                 <span class="school-list__emoji" aria-hidden="true"><?= $s['emoji'] ?></span>
                 <div><strong><?= e($s['name']) ?></strong><small><?= e($s['province']) ?> · <?= $perSchool[$s['id']]['classrooms'] ?> ห้อง · <?= $perSchool[$s['id']]['students'] ?> นักเรียน</small></div>
                 <span class="tone tone--<?= $s['status'] === 'active' ? 'good' : 'warning' ?>"><?= $s['status'] === 'active' ? '✅ ใช้งาน' : '🧪 ทดลองใช้' ?></span>

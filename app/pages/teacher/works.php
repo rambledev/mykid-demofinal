@@ -13,7 +13,7 @@ mk_header(['id' => 'teacher-works', 'title' => 'ผลงานนักเร�
 page_title('🎨', 'ผลงานนักเรียน', 'เลือกห้องเรียน → เลือกนักเรียน → เพิ่มผลงาน');
 ?>
 <?php if (count($rooms) > 1): ?>
-    <?php tab_bar('wroom', array_column(array_map(fn ($r) => ['k' => $r['id'], 'v' => $r['emoji'] . ' ' . $r['name']], $rooms), 'v', 'k')); ?>
+    <?php tab_bar('wroom', array_column(array_map(fn ($r) => ['k' => tok('classrooms', $r['id']), 'v' => $r['emoji'] . ' ' . $r['name']], $rooms), 'v', 'k')); ?>
 <?php else: ?>
     <p class="chip-row"><span class="chip"><?= $rooms[0]['emoji'] ?? '' ?> ห้อง<?= e($rooms[0]['name'] ?? '') ?></span></p>
 <?php endif; ?>
@@ -22,20 +22,20 @@ page_title('🎨', 'ผลงานนักเรียน', 'เลือก�
     <?php $works = scoped('portfolio'); ?>
     <?php foreach ($rooms as $r => $room): ?>
         <?php $kids = classroom_students($room['id']); ?>
-        <section data-tab-panel="wroom:<?= $room['id'] ?>"<?= $r ? ' hidden' : '' ?>>
+        <section data-tab-panel="wroom:<?= e(tok('classrooms', $room['id'])) ?>"<?= $r ? ' hidden' : '' ?>>
             <div class="card">
                 <?php section_head('🧒', 'เลือกนักเรียน', '<span class="count-badge">' . count($kids) . ' คน</span>'); ?>
-                <div class="work-students" role="tablist" data-tabs="wstu<?= $room['id'] ?>">
+                <div class="work-students" role="tablist" data-tabs="wstu<?= e(tok('classrooms', $room['id'])) ?>">
                     <?php foreach ($kids as $i => $s): ?>
                         <?php $n = count(where($works, 'student_id', $s['id'])); ?>
-                        <button type="button" role="tab" class="work-students__item<?= $i ? '' : ' is-active' ?>" data-tab="<?= $s['id'] ?>" aria-selected="<?= $i ? 'false' : 'true' ?>">
+                        <button type="button" role="tab" class="work-students__item<?= $i ? '' : ' is-active' ?>" data-tab="<?= e(tok('students', $s['id'])) ?>" aria-selected="<?= $i ? 'false' : 'true' ?>">
                             <?= student_avatar($s, 'sm') ?><span><?= e($s['nickname']) ?></span><small><?= $n ?> ผลงาน</small>
                         </button>
                     <?php endforeach; ?>
                 </div>
             </div>
             <?php foreach ($kids as $i => $s): ?>
-                <section class="card" data-tab-panel="wstu<?= $room['id'] ?>:<?= $s['id'] ?>"<?= $i ? ' hidden' : '' ?>>
+                <section class="card" data-tab-panel="wstu<?= e(tok('classrooms', $room['id'])) ?>:<?= e(tok('students', $s['id'])) ?>"<?= $i ? ' hidden' : '' ?>>
                     <?php section_head('🎨', 'ผลงานของ' . $s['nickname'], btn_add('portfolio', 'เพิ่มผลงาน', ['student_id' => $s['id'], 'date' => today()]), $s['name']); ?>
                     <?php render_student_works(where($works, 'student_id', $s['id']), true); ?>
                 </section>

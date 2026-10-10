@@ -41,6 +41,12 @@ function store_seed(): array
 {
     mk_log('Store', 'store_seed START');
     $seed = pkg_seed();
+    foreach ($seed['tables']['users'] as &$u) { // demo PINs are hashed before they reach the database
+        if (!str_starts_with((string) $u['pin'], '$')) {
+            $u['pin'] = pin_hash((string) $u['pin']);
+        }
+    }
+    unset($u);
     $state = [
         'schema'    => MK_STORE_SCHEMA,
         'seedDate'  => today(),

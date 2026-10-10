@@ -27,7 +27,7 @@ page_title('⭐', 'สะสมดาว', 'ห้อง' . $user['classroom']['
                     <?= student_avatar($b['student'], 'sm') ?>
                     <strong><?= e($b['student']['nickname']) ?></strong>
                     <span class="leaderboard__stars">⭐ <?= $b['total'] ?></span>
-                    <button type="button" class="btn btn--soft btn--sm" data-action="open-form" data-table="stars" data-defaults="<?= json_attr(['student_id' => $b['student']['id'], 'points' => 3]) ?>">+ ดาว</button>
+                    <button type="button" class="btn btn--soft btn--sm" data-action="open-form" data-table="stars" data-defaults="<?= json_attr(public_row('stars', ['student_id' => $b['student']['id'], 'points' => 3])) ?>">+ ดาว</button>
                 </li>
             <?php endforeach; ?>
         </ol>

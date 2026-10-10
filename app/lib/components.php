@@ -194,17 +194,17 @@ function empty_state(string $emoji, string $text): string
 function btn_add(string $table, string $label, array $defaults = []): string
 {
     return '<button type="button" class="btn btn--soft btn--sm" data-action="open-form" data-table="' . e($table) . '"'
-        . ($defaults ? ' data-defaults="' . json_attr($defaults) . '"' : '') . '>' . icon('plus') . ' ' . e($label) . '</button>';
+        . ($defaults ? ' data-defaults="' . json_attr(public_row($table, $defaults)) . '"' : '') . '>' . icon('plus') . ' ' . e($label) . '</button>';
 }
 
 function btn_edit(string $table, array $row): string
 {
-    return '<button type="button" class="icon-btn" data-action="open-form" data-table="' . e($table) . '" data-record="' . json_attr($row) . '" aria-label="แก้ไข">' . icon('edit') . '</button>';
+    return '<button type="button" class="icon-btn" data-action="open-form" data-table="' . e($table) . '" data-record="' . json_attr(public_row($table, $row)) . '" aria-label="แก้ไข">' . icon('edit') . '</button>';
 }
 
 function btn_delete(string $table, int $id, string $label): string
 {
-    return '<button type="button" class="icon-btn icon-btn--danger" data-action="delete" data-table="' . e($table) . '" data-id="' . $id . '" data-label="' . e($label) . '" aria-label="ลบ ' . e($label) . '">' . icon('trash') . '</button>';
+    return '<button type="button" class="icon-btn icon-btn--danger" data-action="delete" data-table="' . e($table) . '" data-id="' . e(tok($table, $id)) . '" data-label="' . e($label) . '" aria-label="ลบ ' . e($label) . '">' . icon('trash') . '</button>';
 }
 
 /** Search box + chips; JS filters [data-filter-item] elements client-side. */
@@ -363,7 +363,7 @@ function render_food_cards(array $meals, ?int $classroomId, ?array $intake = nul
     foreach ($meals as $m) {
         $level = $intake ? cat_find('intake', $intake['levels'][$m['meal']] ?? null) : null;
         ?>
-        <article class="meal<?= $classroomId ? '' : ' meal--view' ?>" style="--meal-bg: <?= e($m['color']) ?>" data-meal="<?= e($m['meal']) ?>" data-classroom="<?= (int) $classroomId ?>">
+        <article class="meal<?= $classroomId ? '' : ' meal--view' ?>" style="--meal-bg: <?= e($m['color']) ?>" data-meal="<?= e($m['meal']) ?>" data-classroom="<?= e((string) tok('classrooms', $classroomId)) ?>">
             <header class="meal__head">
                 <span class="meal__icon" aria-hidden="true"><?= $m['icon'] ?></span>
                 <div class="meal__title"><h3><?= e($m['label']) ?></h3><small><?= icon('clock') ?> <?= e($m['time']) ?> น.</small></div>
@@ -414,7 +414,7 @@ function render_student_grid(array $students, array $statuses = [], bool $editab
         $inner = student_avatar($s) . '<span class="student__name">' . e($s['nickname']) . '</span>' . $badge;
         if ($editable) {
             echo '<li><button type="button" class="student student--btn' . ($st ? ' has-status' : '') . '" data-action="student-status-open"'
-                . ' data-student="' . $s['id'] . '" data-name="' . e($s['nickname']) . '"'
+                . ' data-student="' . e(tok('students', $s['id'])) . '" data-name="' . e($s['nickname']) . '"'
                 . ' data-status="' . e($st['status'] ?? '') . '" data-note="' . e($st['note'] ?? '') . '"'
                 . ' data-since="' . e($st ? substr($st['at'], 11, 5) : '') . '"'
                 . ' aria-label="กำหนดสถานะของ' . e($s['nickname']) . '">' . $inner . '</button></li>';
@@ -548,7 +548,9 @@ function render_field(string $key, array $field): void
             if (!$required) {
                 echo '<option value="">— ไม่ระบุ —</option>';
             }
+            $idTable = ['classroom' => 'classrooms', 'school' => 'schools', 'student' => 'students'][$field['type']] ?? null;
             foreach (field_options($field) as $value => $text) {
+                $value = $idTable ? tok($idTable, $value) : $value; // ids leave the server as tokens only
                 echo '<option value="' . e((string) $value) . '">' . e($text) . '</option>';
             }
             echo '</select>';
@@ -575,8 +577,8 @@ function render_field(string $key, array $field): void
         case 'phone':
             echo '<input class="input" type="tel" inputmode="numeric" maxlength="10" ' . $attrs . ' placeholder="08xxxxxxxx">';
             break;
-        case 'pin':
-            echo '<input class="input" type="text" inputmode="numeric" maxlength="6" ' . $attrs . ' placeholder="123456">';
+        case 'pin': // write-only: stored hashed, never rendered back; empty on edit = keep the current PIN
+            echo '<input class="input" type="password" inputmode="numeric" maxlength="6" name="' . e($key) . '" placeholder="PIN 6 หลัก (แก้ไข: เว้นว่าง = ใช้ PIN เดิม)" autocomplete="new-password">';
             break;
         default:
             echo '<input class="input" type="text" ' . $attrs . ' maxlength="' . (int) ($field['max'] ?? 120) . '" placeholder="' . e($field['placeholder'] ?? '') . '">';
@@ -667,7 +669,7 @@ function render_chat_thread(array $messages, string $me, int $studentId): void
                 </li>
             <?php endforeach; ?>
         </ol>
-        <form class="chat__composer" data-chat-form data-student="<?= $studentId ?>">
+        <form class="chat__composer" data-chat-form data-student="<?= e((string) tok('students', $studentId)) ?>">
             <input class="input" type="text" name="text" maxlength="300" placeholder="พิมพ์ข้อความ..." aria-label="พิมพ์ข้อความ" autocomplete="off" required>
             <button type="submit" class="btn btn--primary chat__send" aria-label="ส่งข้อความ"><?= icon('send') ?></button>
         </form>
@@ -823,7 +825,7 @@ function render_attendance_row(array $student, ?array $record, bool $canEdit): v
         echo '<div class="att-row__chips" role="group" aria-label="สถานะการมาเรียนของ' . e($student['nickname']) . '">';
         foreach (mk_catalog()['attendance'] as $a) {
             $on = $a['code'] === $record['status'];
-            echo '<button type="button" class="att-chip att-chip--' . e($a['tone']) . ($on ? ' is-on' : '') . '" aria-pressed="' . ($on ? 'true' : 'false') . '" data-action="quick-save" data-table="attendance" data-id="' . $record['id'] . '" data-field="status" data-value="' . e($a['code']) . '" title="' . e($a['label']) . '">' . $a['emoji'] . '<span>' . e($a['label']) . '</span></button>';
+            echo '<button type="button" class="att-chip att-chip--' . e($a['tone']) . ($on ? ' is-on' : '') . '" aria-pressed="' . ($on ? 'true' : 'false') . '" data-action="quick-save" data-table="attendance" data-id="' . e(tok('attendance', $record['id'])) . '" data-field="status" data-value="' . e($a['code']) . '" title="' . e($a['label']) . '">' . $a['emoji'] . '<span>' . e($a['label']) . '</span></button>';
         }
         echo '</div>';
     } else {
@@ -966,7 +968,7 @@ function render_media_cover(array $media, string $label, string $date): void
 
 function btn_upload(string $ownerType, int $ownerId, string $title): string
 {
-    return '<button type="button" class="icon-btn" data-action="upload-open" data-owner-type="' . e($ownerType) . '" data-owner-id="' . $ownerId . '" data-title="' . e($title) . '" aria-label="เพิ่มรูป ' . e($title) . '">📷</button>';
+    return '<button type="button" class="icon-btn" data-action="upload-open" data-owner-type="' . e($ownerType) . '" data-owner-id="' . e(tok(MEDIA_OWNERS[$ownerType], $ownerId)) . '" data-title="' . e($title) . '" aria-label="เพิ่มรูป ' . e($title) . '">📷</button>';
 }
 
 /** Food photos of one menu row (one day of a classroom) with an upload button for staff. */
@@ -979,7 +981,7 @@ function render_food_photos(?array $menuRow, string $label): void
     $media = array_values(array_filter(media_for('food', $menuRow['id']), fn ($m) => empty($m['meal']))); // per-meal photos sit on their meal card
     echo '<div class="food-photos">';
     echo '<div class="food-photos__head"><strong>📸 รูปอาหารรวม · ' . e(thai_short_date($menuRow['date'])) . '</strong>'
-        . ($canUpload ? '<button type="button" class="btn btn--soft btn--sm" data-action="upload-open" data-owner-type="food" data-owner-id="' . $menuRow['id'] . '" data-title="' . e($label) . '">📷 เพิ่มรูปอาหาร</button>' : '') . '</div>';
+        . ($canUpload ? '<button type="button" class="btn btn--soft btn--sm" data-action="upload-open" data-owner-type="food" data-owner-id="' . e(tok('foodMenus', $menuRow['id'])) . '" data-title="' . e($label) . '">📷 เพิ่มรูปอาหาร</button>' : '') . '</div>';
     if ($media) {
         render_media_strip($media, $label);
     } else {
@@ -1115,7 +1117,7 @@ function render_user_notifications(array $user, array $rows): void
     foreach ($rows as $n) {
         $unread = $n['read_at'] === null;
         $when = (substr($n['created_at'], 0, 10) === today() ? 'วันนี้ ' : thai_short_date(substr($n['created_at'], 0, 10)) . ' ') . substr($n['created_at'], 11, 5) . ' น.';
-        echo '<li><button type="button" class="notif-item' . ($unread ? ' is-unread' : '') . '" data-action="notification-open" data-id="' . $n['id'] . '">'
+        echo '<li><button type="button" class="notif-item' . ($unread ? ' is-unread' : '') . '" data-action="notification-open" data-id="' . e(tok('userNotifications', $n['id'])) . '">'
             . '<span class="notif-item__dot" aria-label="' . ($unread ? 'ยังไม่ได้อ่าน' : 'อ่านแล้ว') . '">' . ($unread ? '●' : '○') . '</span>'
             . '<span class="notif-item__body"><strong>' . e($n['title']) . '</strong><span>' . e($n['message']) . '</span><time>' . e($when) . '</time></span>'
             . '</button></li>';

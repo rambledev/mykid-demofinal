@@ -48,7 +48,7 @@ page_title('🚸', 'รับนักเรียนกลับบ้าน', 
                             <div class="pickup-item__side">
                                 <?= tone_badge($st) ?>
                                 <?php if ($action = PICKUP_ACTIONS[$p['status']] ?? null): ?>
-                                    <button type="button" class="btn btn--primary btn--sm" data-action="pickup-update" data-id="<?= $p['id'] ?>" data-status="<?= e(PICKUP_FLOW[$p['status']]) ?>" data-name="<?= e($s['nickname']) ?>">
+                                    <button type="button" class="btn btn--primary btn--sm" data-action="pickup-update" data-id="<?= e(tok('pickups', $p['id'])) ?>" data-status="<?= e(PICKUP_FLOW[$p['status']]) ?>" data-name="<?= e($s['nickname']) ?>">
                                         <span aria-hidden="true"><?= $action['icon'] ?></span> <?= e($action['label']) ?>
                                     </button>
                                 <?php endif; ?>

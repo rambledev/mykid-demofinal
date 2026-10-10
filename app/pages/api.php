@@ -1,8 +1,10 @@
 <?php
 /**
- * Package JSON endpoint (A / B) used by core/assets/js/core.js.
+ * JSON endpoint (POST /api) used by public/assets/js/core.js.
  *
  * Request:  POST JSON { action, ... } + header X-CSRF-Token
+ * Ids:      every id in a request is a secure id token (app/lib/id-token.php) decoded with
+ *           in_id() / validate_fields() — raw numeric ids are rejected.
  * Response: { ok, message, version }   (the page then refreshes its [data-live] regions)
  *
  * Every write = ROLE check (permission matrix) + SCOPE check (permissions.php) against
@@ -32,6 +34,16 @@ if (!verify_csrf($_SERVER['HTTP_X_CSRF_TOKEN'] ?? null)) {
     json_response(['ok' => false, 'message' => 'กรุณารีเฟรชหน้าแล้วลองใหม่อีกครั้ง'], 419);
 }
 
+/** Decode the id token in $input[$key] for $table (0 = not set / new row). */
+function in_id(array $input, string $key, string $table): int
+{
+    $value = $input[$key] ?? null;
+    if ($value === null || $value === '' || $value === 0 || $value === '0') {
+        return 0;
+    }
+    return untok_or_fail($table, $value);
+}
+
 /** Validate submitted values against the table schema. Partial updates only check what is sent. */
 function validate_fields(string $table, array $data, bool $isNew): array
 {
@@ -56,7 +68,7 @@ function validate_fields(string $table, array $data, bool $isNew): array
 
         $value = is_string($value) ? trim($value) : $value;
         $clean[$key] = match ($field['type']) {
-            'classroom', 'student', 'school' => (int) $value,
+            'classroom', 'student', 'school' => untok_or_fail(['classroom' => 'classrooms', 'student' => 'students', 'school' => 'schools'][$field['type']], $value),
             'number' => (function () use ($value, $field) {
                 if (!is_numeric($value) || $value < ($field['min'] ?? PHP_INT_MIN) || $value > ($field['max'] ?? PHP_INT_MAX)) {
                     throw new DemoValidationException('“' . $field['label'] . '” ต้องอยู่ระหว่าง ' . $field['min'] . '–' . $field['max']);
@@ -159,7 +171,10 @@ try {
             table_def($table);
             authorize(can_write_table($user, $table), 'บัญชีนี้ไม่มีสิทธิ์แก้ไขข้อมูลนี้', ['user' => $user['id'], 'role' => $user['role'], 'table' => $table]);
             authorize($table !== 'pickups', 'กรุณาใช้เมนูรับ-ส่ง', ['table' => $table]); // status flow: pickup_* actions only
-            $id = (int) ($input['id'] ?? 0);
+            $id = in_id($input, 'id', $table);
+            if ($table === 'users' && $id && trim((string) ($input['data']['pin'] ?? '')) === '') {
+                unset($input['data']['pin']); // edit without a new PIN = keep the current one (never sent to the browser)
+            }
             $data = validate_fields($table, (array) ($input['data'] ?? []), $id === 0);
             if ($id === 0) {
                 // New rows always carry every schema column (optional ones empty), so views never miss a key.
@@ -181,6 +196,9 @@ try {
             }
 
             if ($table === 'users') {
+                if (isset($data['pin'])) {
+                    $data['pin'] = pin_hash($data['pin']); // credentials are stored hashed only
+                }
                 if ($id) {
                     $target = find_row('users', $id);
                     authorize(in_array($target['role'] ?? '', ['admin', 'executive'], true), 'แก้ไขได้เฉพาะบัญชีผู้ดูแลโรงเรียนและผู้บริหาร', ['id' => $id]);
@@ -230,7 +248,7 @@ try {
             $ownerType = (string) ($input['owner_type'] ?? '');
             $ownerTable = MEDIA_OWNERS[$ownerType] ?? null;
             authorize(has_feature('media') && $ownerTable !== null && $ownerType !== 'portfolio', 'ไม่สามารถอัปโหลดรูปภาพนี้ได้', ['owner' => $ownerType]);
-            $owner = find_row($ownerTable, (int) ($input['owner_id'] ?? 0));
+            $owner = find_row($ownerTable, in_id($input, 'owner_id', $ownerTable));
             authorize($owner !== null && can_write_table($user, $ownerTable) && can_write_table($user, 'mediaFiles') && row_in_scope($user, $ownerTable, $owner),
                 'ไม่มีสิทธิ์อัปโหลดรูปภาพให้รายการนี้', ['user' => $user['id'], 'owner' => $ownerType, 'owner_id' => $input['owner_id'] ?? null]);
             $files = uploaded_files();
@@ -254,8 +272,8 @@ try {
 
         case 'delete':
             $table = (string) ($input['table'] ?? '');
-            $id = (int) ($input['id'] ?? 0);
             table_def($table);
+            $id = in_id($input, 'id', $table);
             authorize(can_write_table($user, $table), 'บัญชีนี้ไม่มีสิทธิ์ลบข้อมูลนี้', ['table' => $table, 'id' => $id]);
             authorize($table !== 'pickups', 'กรุณาใช้เมนูรับ-ส่ง', ['table' => $table]);
             $existing = find_row($table, $id);
@@ -280,7 +298,7 @@ try {
 
         case 'camera_stream':
             // Playback descriptor for ONE camera — re-checks role + school + classroom + camera permission.
-            $camera = authorized_camera((int) ($input['camera_id'] ?? 0), $user);
+            $camera = authorized_camera(in_id($input, 'camera_id', 'cameras'), $user);
             if (empty($camera['is_active'])) {
                 throw new DemoValidationException('กล้องนี้ถูกปิดใช้งานอยู่');
             }
@@ -298,20 +316,20 @@ try {
 
         case 'pickup_create':
             authorize(has_feature('pickup'), 'ไม่สามารถดำเนินการได้');
-            $row = pickup_create($user, (int) ($input['student_id'] ?? 0));
+            $row = pickup_create($user, in_id($input, 'student_id', 'students'));
             $message = 'แจ้งครูแล้ว ครูจะเตรียม' . (find_row('students', $row['student_id'])['nickname'] ?? 'นักเรียน') . 'กลับบ้าน';
             break;
 
         case 'pickup_update':
             authorize(has_feature('pickup'), 'ไม่สามารถดำเนินการได้');
-            $row = pickup_advance($user, (int) ($input['id'] ?? 0), (string) ($input['status'] ?? ''));
+            $row = pickup_advance($user, in_id($input, 'id', 'pickups'), (string) ($input['status'] ?? ''));
             $message = pickup_status_meta($row['status'])['teacher'];
             break;
 
         /* ---- In-app notifications (core/notifications.php) — own rows only ---- */
         case 'notification_read':
             authorize(has_feature('inAppNotifications'), 'ไม่สามารถดำเนินการได้');
-            $row = notification_mark_read($user, (int) ($input['id'] ?? 0));
+            $row = notification_mark_read($user, in_id($input, 'id', 'userNotifications'));
             $link = notification_link($user, $row);
             // link is relative to the package root (where api.php lives) — the browser resolves it against apiUrl
             json_response(['ok' => true, 'unread' => notifications_unread_count($user), 'link' => $link, 'version' => store_state()['version']]);
@@ -325,7 +343,7 @@ try {
         case 'set_status':
             authorize(can_write_table($user, 'statuses'), 'บัญชีนี้ไม่มีสิทธิ์เปลี่ยนสถานะห้องเรียน', ['role' => $user['role']]);
             $data = validate_fields('statuses', ['code' => $input['code'] ?? '', 'note' => $input['note'] ?? ''], true);
-            $row = apply_write_scope($user, 'statuses', $data + ['classroom_id' => $input['classroom_id'] ?? null]);
+            $row = apply_write_scope($user, 'statuses', $data + ['classroom_id' => in_id($input, 'classroom_id', 'classrooms') ?: null]);
             store_mutate(function (array &$state) use ($row, $user) {
                 array_unshift($state['tables']['statuses'], ['id' => $state['nextId']++] + $row + ['at' => date('Y-m-d H:i:s'), 'by' => $user['teacher_id']]);
             });
@@ -355,7 +373,7 @@ try {
                 }
                 array_map('validate_image_upload', $mealPhotos);
             }
-            $scope = apply_write_scope($user, 'foodMenus', ['classroom_id' => $input['classroom_id'] ?? null]);
+            $scope = apply_write_scope($user, 'foodMenus', ['classroom_id' => in_id($input, 'classroom_id', 'classrooms') ?: null]);
             store_mutate(function (array &$state) use ($scope, $meal, $items) {
                 foreach ($state['tables']['foodMenus'] as &$menu) {
                     if ($menu['classroom_id'] === $scope['classroom_id'] && ($menu['date'] ?? '') === today()) {
@@ -382,7 +400,7 @@ try {
 
         case 'save_intake':
             authorize(can_write_table($user, 'foodIntake'), 'บัญชีนี้ไม่มีสิทธิ์บันทึกการรับประทานอาหาร', ['role' => $user['role']]);
-            $id = (int) ($input['id'] ?? 0);
+            $id = in_id($input, 'id', 'foodIntake');
             $meal = (string) ($input['meal'] ?? '');
             $level = (string) ($input['level'] ?? '');
             if (!cat_find('meals', $meal) || !cat_find('intake', $level)) {
@@ -400,7 +418,7 @@ try {
             if ($text === '') {
                 throw new DemoValidationException('กรุณาพิมพ์ข้อความ');
             }
-            $row = apply_write_scope($user, 'messages', ['student_id' => (int) ($input['student_id'] ?? 0)]);
+            $row = apply_write_scope($user, 'messages', ['student_id' => in_id($input, 'student_id', 'students')]);
             $sender = $user['role'] === 'parent' ? 'คุณ' . ($user['relation'] ?? 'แม่') : $user['name'];
             store_insert('messages', $row + ['from' => $user['role'], 'sender' => $sender, 'text' => mb_substr($text, 0, 300), 'at' => date('Y-m-d H:i:s')]);
             $message = 'ส่งข้อความแล้ว';

@@ -212,7 +212,7 @@
 
   async function submitForm(form) {
     const table = form.dataset.formTable;
-    const id = Number(form.elements.id.value || 0);
+    const id = form.elements.id.value || ''; // secure id token ('' = new row)
     const data = {};
     new FormData(form).forEach((value, key) => { if (key !== 'id' && !(value instanceof File)) data[key] = value; });
     const imageInput = form.querySelector('[data-image-input]');
@@ -239,12 +239,12 @@
   async function deleteRecord(button) {
     const { table, id, label } = button.dataset;
     const confirmed = await confirmDialog({ title: 'ลบข้อมูลนี้?', message: `“${label}” จะถูกลบออกจากระบบ`, okLabel: 'ลบ' });
-    if (confirmed) await runAction(button, 'delete', { table, id: Number(id) });
+    if (confirmed) await runAction(button, 'delete', { table, id });
   }
 
   function quickSave(button) {
     const { table, id, field, value } = button.dataset;
-    return runAction(button, 'save', { table, id: Number(id), data: { [field]: value } });
+    return runAction(button, 'save', { table, id, data: { [field]: value } });
   }
 
   /* ------------------------------------------------------------------------
@@ -276,7 +276,7 @@
     const picked = Picker.files(form);
     const files = picked.length ? await prepareImages(picked) : null; // food photos taken / picked in this meal
     if (picked.length && !files) return;
-    runAction(form.querySelector('[type="submit"]'), 'save_meal', { meal: card.dataset.meal, classroom_id: Number(card.dataset.classroom), items }, null, files);
+    runAction(form.querySelector('[type="submit"]'), 'save_meal', { meal: card.dataset.meal, classroom_id: card.dataset.classroom, items }, null, files);
   }
 
   let activeThread = null;
@@ -299,7 +299,7 @@
     const input = form.elements.text;
     const text = input.value.trim();
     if (!text) return;
-    const ok = await runAction(form.querySelector('[type="submit"]'), 'send_message', { student_id: Number(form.dataset.student), text });
+    const ok = await runAction(form.querySelector('[type="submit"]'), 'send_message', { student_id: form.dataset.student, text });
     if (ok) {
       const fresh = $(`[data-chat-form][data-student="${form.dataset.student}"] input[name="text"]`);
       if (fresh) fresh.focus();
@@ -509,7 +509,7 @@
 
     async open(button) {
       try {
-        const data = await api('notification_read', { id: Number(button.dataset.id) });
+        const data = await api('notification_read', { id: button.dataset.id });
         button.classList.remove('is-unread');
         const dot = $('.notif-item__dot', button);
         if (dot) { dot.textContent = '○'; dot.setAttribute('aria-label', 'อ่านแล้ว'); }
@@ -564,7 +564,7 @@
     async go(button) {
       const ok = await confirmDialog({ title: `กำลังไปรับ${button.dataset.name}?`, message: 'ครูจะได้รับแจ้งว่าคุณกำลังเดินทางมารับนักเรียน', icon: '🚗', okLabel: 'กำลังไปรับลูก' });
       if (!ok) return;
-      if (await runAction(button, 'pickup_create', { student_id: Number(button.dataset.student) })) await this.sync(false);
+      if (await runAction(button, 'pickup_create', { student_id: button.dataset.student })) await this.sync(false);
     },
 
     async update(button) {
@@ -573,7 +573,7 @@
         const ok = await confirmDialog({ title: `ส่งมอบ${name}แล้ว?`, message: 'ยืนยันว่าผู้ปกครองรับนักเรียนจากจุดรับ-ส่งแล้ว', icon: '🤝', okLabel: 'ส่งมอบนักเรียนแล้ว' });
         if (!ok) return;
       }
-      if (await runAction(button, 'pickup_update', { id: Number(id), status })) await this.sync(false);
+      if (await runAction(button, 'pickup_update', { id, status })) await this.sync(false);
     },
   };
 
@@ -592,7 +592,7 @@
    * --------------------------------------------------------------------- */
   const CCTV = (() => {
     const players = new Map();
-    const HLS_JS = 'https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js';
+    const HLS_JS = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js'; // pinned version (CSP allows jsDelivr)
     let hlsLoading = null;
 
     const SCENES = {
@@ -963,7 +963,7 @@
       if (!status) { error.textContent = 'กรุณาพิมพ์สถานะ'; error.hidden = false; form.elements.status.focus(); return; }
       const sheet = form.closest('.sheet');
       await runAction($('[type="submit"]', form), 'save',
-        { table: 'studentStatuses', id: 0, data: { student_id: form.elements.student_id.value, status, note } }, () => closeSheet(sheet));
+        { table: 'studentStatuses', id: '', data: { student_id: form.elements.student_id.value, status, note } }, () => closeSheet(sheet));
     },
   };
 
@@ -1082,7 +1082,7 @@
     if (event.target.matches('[data-image-source]')) { Picker.add(event.target); return; }
     const select = event.target.closest('[data-intake-id]');
     if (!select) return;
-    runAction(select, 'save_intake', { id: Number(select.dataset.intakeId), meal: select.dataset.meal, level: select.value });
+    runAction(select, 'save_intake', { id: select.dataset.intakeId, meal: select.dataset.meal, level: select.value });
   });
 
   document.addEventListener('submit', (event) => {

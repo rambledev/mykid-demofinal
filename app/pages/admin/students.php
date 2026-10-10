@@ -5,12 +5,12 @@ declare(strict_types=1);
 $rooms = my_classrooms();
 mk_header(['id' => 'admin-students', 'title' => 'จัดการนักเรียน', 'nav' => 'students']);
 page_title('👧', 'จัดการนักเรียน', 'ทั้งหมด ' . count(scoped('students')) . ' คน', btn_add('students', 'เพิ่มนักเรียน'));
-filter_bar('students', array_column(array_map(fn ($r) => ['k' => $r['id'], 'v' => $r['emoji'] . ' ' . $r['name']], $rooms), 'v', 'k'), 'ค้นหาชื่อ ชื่อเล่น หรือผู้ปกครอง...');
+filter_bar('students', array_column(array_map(fn ($r) => ['k' => tok('classrooms', $r['id']), 'v' => $r['emoji'] . ' ' . $r['name']], $rooms), 'v', 'k'), 'ค้นหาชื่อ ชื่อเล่น หรือผู้ปกครอง...');
 ?>
 <div class="person-grid" data-filter-list="students" data-live id="live-students">
     <?php foreach (scoped('students') as $s): ?>
         <?php $room = find_row('classrooms', $s['classroom_id']); ?>
-        <article class="person" data-filter-item data-group="<?= $s['classroom_id'] ?>" data-search="<?= e($s['nickname'] . ' ' . $s['name'] . ' ' . $s['parentName']) ?>">
+        <article class="person" data-filter-item data-group="<?= e(tok('classrooms', $s['classroom_id'])) ?>" data-search="<?= e($s['nickname'] . ' ' . $s['name'] . ' ' . $s['parentName']) ?>">
             <?= student_avatar($s) ?>
             <div class="person__body">
                 <strong><?= e($s['nickname']) ?></strong>
