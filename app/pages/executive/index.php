@@ -48,8 +48,8 @@ page_title('💼', 'ภาพรวมโรงเรียน', $user['school']
         </section>
         <?php if (has_feature('stars')): ?>
             <section class="card">
-                <?php section_head('⭐', 'ดาวสะสมแยกตามห้อง'); ?>
-                <?php $stars = scoped('stars'); ?>
+                <?php section_head('🏦', STAR_BANK_NAME . 'แยกตามห้อง · ' . thai_month_label(date('Y-m')), '<a class="btn btn--soft btn--sm" href="' . e(rurl('stars')) . '">ดูอันดับ</a>'); ?>
+                <?php $stars = stars_in_month(scoped('stars'), date('Y-m')); ?>
                 <?= chart_hbars(array_map(fn ($r, $i) => ['label' => $r['name'], 'emoji' => $r['emoji'], 'value' => stars_total(where($stars, 'classroom_id', $r['id'])), 'color' => CHART_SERIES[$i % 3]], $rooms, array_keys($rooms)), ' ดาว') ?>
             </section>
             <section class="card">

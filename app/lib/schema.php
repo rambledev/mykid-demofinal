@@ -100,10 +100,13 @@ function mk_tables(): array
             'status'     => ['label' => 'สถานะ', 'type' => 'text', 'required' => true, 'max' => 60],
             'note'       => ['label' => 'หมายเหตุ', 'type' => 'textarea', 'max' => 200],
         ]],
-        'stars' => ['label' => 'ดาว', 'level' => 'student', 'fields' => [
+        // ธนาคารความดีขับขี่ปลอดภัย: stars for a student, or for the student's parent (recipient = parent →
+        // parent_id resolved on the server from parentStudents; student_id keeps the row in the child's scope).
+        'stars' => ['label' => 'ดาวธนาคารความดี', 'level' => 'student', 'fields' => [
+            'recipient'  => ['label' => 'ให้ดาวกับ', 'type' => 'select', 'required' => true, 'options' => 'starRecipients'],
             'student_id' => ['label' => 'นักเรียน', 'type' => 'student', 'required' => true],
             'points'     => ['label' => 'จำนวนดาว', 'type' => 'number', 'min' => 1, 'max' => 10, 'required' => true],
-            'reason'     => ['label' => 'เหตุผล', 'type' => 'text', 'required' => true, 'max' => 60, 'placeholder' => 'เช่น ช่วยเก็บของ'],
+            'reason'     => ['label' => 'ความดีที่ทำ', 'type' => 'text', 'required' => true, 'max' => 60, 'placeholder' => 'เช่น ช่วยเก็บของ / สวมหมวกกันน็อก', 'suggest' => ['starReasons', 'parentStarReasons']],
         ]],
         'development' => ['label' => 'พัฒนาการ', 'level' => 'student', 'fields' => [
             'student_id' => ['label' => 'นักเรียน', 'type' => 'student', 'required' => true],

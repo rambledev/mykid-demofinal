@@ -577,7 +577,18 @@ function render_field(string $key, array $field): void
             echo '<input class="input" type="password" inputmode="numeric" maxlength="6" name="' . e($key) . '" placeholder="PIN 6 หลัก (แก้ไข: เว้นว่าง = ใช้ PIN เดิม)" autocomplete="new-password">';
             break;
         default:
-            echo '<input class="input" type="text" ' . $attrs . ' maxlength="' . (int) ($field['max'] ?? 120) . '" placeholder="' . e($field['placeholder'] ?? '') . '">';
+            $list = !empty($field['suggest']) ? 'suggest-' . $key : null; // typed freely, with suggestions
+            echo '<input class="input" type="text" ' . $attrs . ' maxlength="' . (int) ($field['max'] ?? 120) . '" placeholder="' . e($field['placeholder'] ?? '') . '"'
+                . ($list ? ' list="' . $list . '" autocomplete="off"' : '') . '>';
+            if ($list) {
+                echo '<datalist id="' . $list . '">';
+                foreach ((array) $field['suggest'] as $catalogList) {
+                    foreach (mk_catalog()[$catalogList] as $item) {
+                        echo '<option value="' . e($item['reason'] ?? $item['label']) . '">';
+                    }
+                }
+                echo '</datalist>';
+            }
     }
     echo '</label>';
 }
@@ -725,7 +736,7 @@ function render_dev_bars(array $dev): void
 function render_star_history(array $rows, int $limit = 20): void
 {
     if (!$rows) {
-        echo '<p class="empty">ยังไม่มีดาวสะสม</p>';
+        echo '<p class="empty">ยังไม่มีดาวในธนาคารความดี</p>';
         return;
     }
     echo '<ol class="star-history">';

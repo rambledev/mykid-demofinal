@@ -112,10 +112,12 @@ page_title('📑', 'รายงานภาพรวม', $user['school']['name
 
     <?php if (has_feature('stars')): ?>
         <section class="card">
-            <?php section_head('⭐', 'สรุปดาวสะสม & สุขภาพ'); ?>
+            <?php section_head('🏦', 'สรุป' . STAR_BANK_NAME . ' & สุขภาพ', '<a class="btn btn--soft btn--sm" href="' . e(rurl('stars')) . '">อันดับประจำเดือน</a>'); ?>
             <?php $health = count_by(today_rows(scoped('healthRecords')), 'condition'); ?>
             <ul class="menu-list">
-                <li><span>⭐ ดาวที่มอบทั้งหมด</span><strong><?= stars_total(scoped('stars')) ?> ดาว</strong></li>
+                <?php $monthStars = stars_in_month(scoped('stars'), date('Y-m')); ?>
+                <li><span>🧒 ดาวนักเรียน (<?= e(thai_month_label(date('Y-m'))) ?>)</span><strong><?= stars_total(star_rows('student', $monthStars)) ?> ดาว</strong></li>
+                <li><span>🛵 ดาวผู้ปกครอง ขับขี่ปลอดภัย</span><strong><?= stars_total(star_rows('parent', $monthStars)) ?> ดาว</strong></li>
                 <li><span>💚 สุขภาพปกติ (วันนี้)</span><strong><?= $health['normal'] ?? 0 ?> คน</strong></li>
                 <li><span>🟡 เฝ้าระวัง (วันนี้)</span><strong><?= $health['watch'] ?? 0 ?> คน</strong></li>
                 <li><span>😴 นอนกลางวันแล้ว</span><strong><?= count(array_filter(today_rows(scoped('sleepRecords')), fn ($s) => $s['end'] !== '')) ?> คน</strong></li>

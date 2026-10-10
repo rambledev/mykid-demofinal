@@ -1101,3 +1101,25 @@
 .logout-form { display: contents; }
 .appbar__logout, .sidebar__logout { border: 0; font: inherit; cursor: pointer; }
 .sidebar__logout { width: 100%; background: none; text-align: start; }
+
+/* ---------- ธนาคารความดีขับขี่ปลอดภัย: month switcher + ranked leaderboard ---------- */
+.month-nav { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; margin: 0 0 14px; }
+.month-nav > :first-child { justify-self: start; }
+.month-nav > :last-child { justify-self: end; }
+.month-nav__current { padding: 6px 14px; border-radius: 999px; background: var(--yellow-2); color: #7A5600; white-space: nowrap; }
+.leaderboard--ranked li { grid-template-columns: 36px auto 1fr auto auto; }
+.leaderboard--ranked li.is-top { background: linear-gradient(135deg, #FFF4CC, #FFEAF2); box-shadow: inset 0 0 0 2px #FFD66B; }
+.leaderboard__rank { font-size: 20px; font-weight: 800; text-align: center; }
+.leaderboard__name { display: grid; min-width: 0; }
+.leaderboard__name small { color: var(--ink-soft); font-size: 12px; }
+.leaderboard__emoji { font-size: 26px; }
+.leaderboard-zero { margin-top: 12px; }
+.leaderboard-zero summary { cursor: pointer; color: var(--ink-soft); font-weight: 700; }
+.leaderboard-zero .chip-row { margin-top: 8px; flex-wrap: wrap; }
+.star-hero + .star-hero { margin-top: 12px; }
+.star-hero--parent { background: linear-gradient(135deg, #DFF4FF, #DDF7E6); }
+.star-hero__emoji { font-size: 56px; line-height: 1; }
+@media (max-width: 420px) {
+  .leaderboard--ranked li { grid-template-columns: 30px auto 1fr auto; }
+  .leaderboard--ranked li .btn { grid-column: 3 / -1; justify-self: end; }
+}

@@ -214,6 +214,7 @@ function seed_build_tables(array $schools, array $users, ?array $extraActivity =
     }
 
     seed_messages($t, $classroomsById, $teachersByRoom, $nextId);
+    seed_parent_stars($t, $teachersByRoom, $nextId);
     seed_cameras($t, $nextId);
     seed_pickups_day($t, $today, $nextId);
     seed_notifications($t, $nextId);
@@ -240,11 +241,11 @@ function seed_student_day(array &$t, array $st, ?array $teacher, int &$nextId): 
            [4, 5, 'ตั้งใจทำกิจกรรม'], [6, 2, 'ทานข้าวหมด'], [8, 3, 'ช่วยเก็บของ'], [10, 4, 'กล้าแสดงออก']]
         : array_map(function ($i) use ($sid) {
             $reason = mk_catalog()['starReasons'][mk_rand($sid, 'star', $i) % 6];
-            return [$i * 2, $reason['points'], $reason['reason']];
+            return [$i * 4 + mk_rand($sid, 'starday', $i) % 3, $reason['points'], $reason['reason']]; // ~6 weeks → this + last month
         }, range(0, 1 + mk_rand($sid, 'stars') % 4 + [0, 2, 3, 1, 0, 4][$st['school_id'] % 6])); // schools differ
     foreach ($starRows as [$daysAgo, $points, $reason]) {
-        $t['stars'][] = ['id' => $nextId++] + $base + ['date' => date('Y-m-d', strtotime("-$daysAgo day")),
-            'points' => $points, 'reason' => $reason, 'by' => $teacher['id'] ?? null];
+        $t['stars'][] = ['id' => $nextId++] + $base + ['recipient' => 'student', 'parent_id' => null,
+            'date' => date('Y-m-d', strtotime("-$daysAgo day")), 'points' => $points, 'reason' => $reason, 'by' => $teacher['id'] ?? null];
     }
 
     $dev = ['id' => $nextId++] + $base + ['updated' => $today];
@@ -610,6 +611,36 @@ function seed_pickups_day(array &$t, string $date, int &$nextId): void
         }
     }
     mk_log('Seed', 'seed_pickups_day END', ['added' => $added]);
+}
+
+/**
+ * ธนาคารความดีขับขี่ปลอดภัย: safe-driving stars for every parent account over the last ~6 weeks
+ * (this month + last month), so the monthly parent ranking has data. Row scope = the first child.
+ */
+function seed_parent_stars(array &$t, array $teachersByRoom, int &$nextId): void
+{
+    $reasons = mk_catalog()['parentStarReasons'];
+    $studentsById = array_column($t['students'], null, 'id');
+    foreach ($t['users'] as $u) {
+        if ($u['role'] !== 'parent') {
+            continue;
+        }
+        $childId = $u['children'][0] ?? $u['student_id'];
+        $child = $studentsById[$childId] ?? null;
+        if (!$child) {
+            continue;
+        }
+        $teacher = $teachersByRoom[$child['classroom_id']][0] ?? null;
+        $n = 3 + mk_rand($u['id'], 'pstars') % 6;
+        for ($i = 0; $i < $n; $i++) {
+            $reason = $reasons[mk_rand($u['id'], 'preason', $i) % count($reasons)];
+            $daysAgo = mk_rand($u['id'], 'pday', $i) % 42;
+            $t['stars'][] = ['id' => $nextId++, 'school_id' => $child['school_id'], 'classroom_id' => $child['classroom_id'],
+                'student_id' => $child['id'], 'recipient' => 'parent', 'parent_id' => $u['id'],
+                'date' => date('Y-m-d', strtotime("-$daysAgo day")), 'points' => $reason['points'], 'reason' => $reason['reason'],
+                'by' => $teacher['id'] ?? null];
+        }
+    }
 }
 
 /** parentStudents: one row per parent ↔ child link (the multi-child demo parent has two). */

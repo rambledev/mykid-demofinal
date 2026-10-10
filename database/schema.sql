@@ -417,6 +417,13 @@ CREATE TABLE IF NOT EXISTS media_files (
     KEY idx_school (school_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ---------------------------------------------------------------- Migrations (idempotent, run when this file changes)
+
+-- ธนาคารความดีขับขี่ปลอดภัย: stars for parents too (recipient = 'parent' + parent_id).
+ALTER TABLE stars ADD COLUMN IF NOT EXISTS recipient VARCHAR(10) NOT NULL DEFAULT 'student' AFTER student_id;
+ALTER TABLE stars ADD COLUMN IF NOT EXISTS parent_id INT UNSIGNED NULL AFTER recipient;
+ALTER TABLE stars ADD INDEX IF NOT EXISTS idx_recipient_date (recipient, date);
+
 -- ---------------------------------------------------------------- Security
 
 -- Login throttling (app/lib/security.php): failed attempts per phone / IP inside a 15-minute window.

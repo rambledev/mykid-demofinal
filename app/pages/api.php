@@ -104,7 +104,7 @@ function insert_defaults(string $table, array $row, array $user): array
         'classrooms' => $row + ['emoji' => '🐣', 'color' => '#FFF4CC', 'capacity' => 20],
         'schools'    => $row + ['emoji' => '🏫', 'color' => '#FFF4CC', 'status' => 'active'],
         'users'      => $row + ['classroom_id' => null, 'student_id' => null, 'teacher_id' => null],
-        'stars'      => $row + ['date' => today(), 'by' => $user['teacher_id']],
+        'stars'      => $row + ['recipient' => 'student', 'date' => today(), 'by' => $user['teacher_id']],
         'portfolio'  => ['date' => ($row['date'] ?? '') !== '' ? $row['date'] : today()] + $row + ['art' => random_int(0, 5)],
         'photos'     => $row + ['date' => today(), 'art' => random_int(0, 5), 'emoji' => '📷'],
         'notifications' => $row + ['at' => $now, 'student_id' => null],
@@ -195,6 +195,20 @@ try {
                 [$data, $cameraFlags] = prepare_camera_data($data);
             }
 
+            if ($table === 'stars') {
+                // ธนาคารความดี: a parent star belongs to the child's parent account (resolved here, never sent by the browser).
+                $existingStar = $id ? find_row('stars', $id) : null;
+                $recipient = $data['recipient'] ?? ($existingStar['recipient'] ?? 'student');
+                $studentId = $data['student_id'] ?? ($existingStar['student_id'] ?? null);
+                $data['parent_id'] = null;
+                if ($recipient === 'parent') {
+                    $parents = $studentId ? student_parent_ids((int) $studentId) : [];
+                    if (!$parents) {
+                        throw new DemoValidationException('นักเรียนคนนี้ยังไม่มีบัญชีผู้ปกครองในระบบ');
+                    }
+                    $data['parent_id'] = $parents[0];
+                }
+            }
             if ($table === 'users') {
                 if (isset($data['pin'])) {
                     $data['pin'] = pin_hash($data['pin']); // credentials are stored hashed only

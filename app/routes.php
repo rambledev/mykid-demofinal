@@ -19,6 +19,11 @@ return [
         ['GET',      '/media/{token}', 'media'],
         ['GET',      '/healthz',       'healthz', ['stateless' => true]],
         ['GET',      '/readyz',        'readyz',  ['stateless' => true]],
+        // ธนาคารความดีขับขี่ปลอดภัย — monthly ranking of another month (YYYY-MM)
+        ['GET',      '/admin/stars/{month}',     'common/stars', ['role' => 'admin']],
+        ['GET',      '/executive/stars/{month}', 'common/stars', ['role' => 'executive']],
+        ['GET',      '/teacher/stars/{month}',   'common/stars', ['role' => 'teacher']],
+        ['GET',      '/parent/stars/{month}',    'parent/stars', ['role' => 'parent']],
     ],
     'sections' => [
         'admin' => ['role' => 'admin', 'pages' => [
@@ -33,7 +38,7 @@ return [
             'index'      => 'admin/index',
             'menu'       => 'common/menu',
             'settings'   => 'admin/settings',
-            'stars'      => 'admin/stars',
+            'stars'      => 'common/stars',
             'storage'    => 'admin/storage',
             'students'   => 'admin/students',
             'teachers'   => 'admin/teachers',
@@ -45,6 +50,7 @@ return [
             'dashboard' => 'executive/dashboard',
             'index'     => 'executive/index',
             'reports'   => 'executive/reports',
+            'stars'     => 'common/stars',
         ]],
         'teacher' => ['role' => 'teacher', 'pages' => [
             'account'       => 'common/account',
@@ -61,7 +67,7 @@ return [
             'pickup'        => 'teacher/pickup',
             'portfolio'     => 'teacher/portfolio',
             'sleep'         => 'teacher/sleep',
-            'stars'         => 'teacher/stars',
+            'stars'         => 'common/stars',
             'status'        => 'teacher/status',
             'works'         => 'teacher/works',
         ]],

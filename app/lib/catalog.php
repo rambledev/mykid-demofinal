@@ -64,6 +64,19 @@ function mk_catalog(): array
             ['reason' => 'ทานข้าวหมด',     'points' => 2],
             ['reason' => 'นอนกลางวันเรียบร้อย', 'points' => 1],
         ],
+        // ธนาคารความดีขับขี่ปลอดภัย — parents earn stars for safe driving at drop-off / pick-up.
+        'parentStarReasons' => [
+            ['reason' => 'สวมหมวกกันน็อกทั้งผู้ปกครองและเด็ก', 'points' => 5],
+            ['reason' => 'คาดเข็มขัดนิรภัย / ใช้คาร์ซีทให้เด็ก',  'points' => 5],
+            ['reason' => 'จอดรถในจุดรับ-ส่งที่กำหนด',          'points' => 3],
+            ['reason' => 'ขับขี่ช้าและระมัดระวังในเขตโรงเรียน',  'points' => 3],
+            ['reason' => 'ไม่ใช้โทรศัพท์ขณะขับขี่',             'points' => 3],
+            ['reason' => 'มารับ-ส่งตรงเวลา',                  'points' => 2],
+        ],
+        'starRecipients' => [
+            ['code' => 'student', 'label' => 'นักเรียน',  'emoji' => '🧒'],
+            ['code' => 'parent',  'label' => 'ผู้ปกครองของนักเรียน (ขับขี่ปลอดภัย)', 'emoji' => '👨‍👩‍👧'],
+        ],
         'portfolioCategories' => [
             ['code' => 'art',     'label' => 'ศิลปะ',       'emoji' => '🎨'],
             ['code' => 'language','label' => 'ภาษา',        'emoji' => '✏️'],

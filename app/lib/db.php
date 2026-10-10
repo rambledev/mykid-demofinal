@@ -73,21 +73,26 @@ function mk_db_unavailable(): never
 }
 
 /**
- * Create missing tables from database/schema.sql (empty database, or a table added to the
- * schema later). Every statement is idempotent (CREATE TABLE IF NOT EXISTS / INSERT IGNORE).
+ * Apply database/schema.sql when the database is empty or the file changed (new table / column).
+ * Every statement is idempotent (CREATE TABLE IF NOT EXISTS, ALTER ... IF NOT EXISTS, INSERT IGNORE);
+ * the file's hash is kept in app_meta 'ddl' so a normal request costs one tiny SELECT.
  */
 function mk_db_install_if_missing(PDO $pdo): void
 {
-    $sql = (string) file_get_contents(MK_ROOT . '/database/schema.sql');
-    preg_match_all('/CREATE TABLE IF NOT EXISTS\s+`?([a-z_]+)`?/i', $sql, $m);
-    $existing = $pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);
-    $missing = array_values(array_diff($m[1], $existing));
-    if (!$missing) {
+    $file = MK_ROOT . '/database/schema.sql';
+    $hash = md5_file($file);
+    try {
+        $applied = $pdo->query("SELECT v FROM app_meta WHERE k = 'ddl'")->fetchColumn();
+    } catch (PDOException) {
+        $applied = false; // app_meta missing = empty database
+    }
+    if ($applied === $hash) {
         return;
     }
-    mk_log('DB', 'install START (missing tables)', ['tables' => $missing]);
-    mk_db_run_sql($pdo, $sql);
-    mk_log('DB', 'install END');
+    mk_log('DB', 'schema apply START', ['from' => $applied ?: null, 'to' => $hash]);
+    mk_db_run_sql($pdo, (string) file_get_contents($file));
+    $pdo->prepare("REPLACE INTO app_meta (k, v) VALUES ('ddl', ?)")->execute([$hash]);
+    mk_log('DB', 'schema apply END');
 }
 
 /** Run a .sql file's statements one by one (statements end with ";" at the end of a line). */

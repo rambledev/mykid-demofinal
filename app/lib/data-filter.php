@@ -181,16 +181,123 @@ function today_by_student(string $table): array
     return $rows;
 }
 
-function student_stars(int $studentId): array
+/* ---------------------------------------------------------------------------
+ * ธนาคารความดีขับขี่ปลอดภัย (stars) — students and parents, ranked per month
+ * ------------------------------------------------------------------------ */
+
+const STAR_BANK_NAME = 'ธนาคารความดี';
+const STAR_BANK_FULL_NAME = 'ธนาคารความดีขับขี่ปลอดภัย';
+
+/** Star rows of one recipient kind ('student' | 'parent'), newest first. */
+function star_rows(string $recipient = 'student', ?array $rows = null): array
 {
-    $rows = where(scoped('stars'), 'student_id', $studentId);
+    $rows = array_values(array_filter($rows ?? scoped('stars'), fn ($r) => ($r['recipient'] ?? 'student') === $recipient));
     usort($rows, fn ($a, $b) => [$b['date'], $b['id']] <=> [$a['date'], $a['id']]);
     return $rows;
+}
+
+function student_stars(int $studentId): array
+{
+    return where(star_rows('student'), 'student_id', $studentId);
+}
+
+function parent_stars(int $parentId): array
+{
+    return where(star_rows('parent'), 'parent_id', $parentId);
 }
 
 function stars_total(array $rows): int
 {
     return array_sum(array_column($rows, 'points'));
+}
+
+/** Month from the URL ("2026-10"), or the current month when missing / invalid / in the future. */
+function star_month(?string $param): string
+{
+    return $param && preg_match('/^(20\d\d)-(0[1-9]|1[0-2])$/', $param) && $param <= date('Y-m') ? $param : date('Y-m');
+}
+
+/** "ตุลาคม 2569" */
+function thai_month_label(string $month): string
+{
+    [$y, $m] = array_map('intval', explode('-', $month));
+    return THAI_MONTHS[$m] . ' ' . ($y + 543);
+}
+
+function stars_in_month(array $rows, string $month): array
+{
+    return array_values(array_filter($rows, fn ($r) => str_starts_with((string) $r['date'], $month)));
+}
+
+/** Months that have stars (newest first), always including the current month. */
+function star_months(array $rows): array
+{
+    $months = array_unique(array_merge([date('Y-m')], array_map(fn ($r) => substr((string) $r['date'], 0, 7), $rows)));
+    rsort($months);
+    return $months;
+}
+
+/**
+ * Monthly ranking: [['id' => recipient id, 'total' => stars, 'count' => times, 'rank' => 1..]] sorted by
+ * stars (most first). Equal totals share a rank (1, 1, 3, ...). $key = 'student_id' | 'parent_id'.
+ * $ids lists everybody who should appear even with 0 stars (e.g. the whole class).
+ */
+function star_ranking(array $monthRows, string $key, array $ids = []): array
+{
+    $totals = array_fill_keys($ids, 0);
+    $counts = array_fill_keys($ids, 0);
+    foreach ($monthRows as $r) {
+        if ($r[$key] === null) {
+            continue;
+        }
+        $totals[$r[$key]] = ($totals[$r[$key]] ?? 0) + (int) $r['points'];
+        $counts[$r[$key]] = ($counts[$r[$key]] ?? 0) + 1;
+    }
+    $list = [];
+    foreach ($totals as $id => $total) {
+        $list[] = ['id' => (int) $id, 'total' => $total, 'count' => $counts[$id] ?? 0];
+    }
+    usort($list, fn ($a, $b) => [$b['total'], $a['id']] <=> [$a['total'], $b['id']]);
+    $rank = 0;
+    $previous = null;
+    foreach ($list as $i => &$row) {
+        if ($row['total'] !== $previous) {
+            $rank = $i + 1;
+            $previous = $row['total'];
+        }
+        $row['rank'] = $row['total'] > 0 ? $rank : null; // nobody is ranked with 0 stars
+    }
+    unset($row);
+    return $list;
+}
+
+/** Rank position of one id inside a ranking (null = no stars this month). */
+function star_rank_of(array $ranking, int $id): ?array
+{
+    foreach ($ranking as $row) {
+        if ($row['id'] === $id) {
+            return $row;
+        }
+    }
+    return null;
+}
+
+/** Parent user ids linked to a student (parentStudents, or the legacy users.student_id link). */
+function student_parent_ids(int $studentId): array
+{
+    $ids = array_column(where(store_rows('parentStudents'), 'student_id', $studentId), 'user_id');
+    foreach (store_rows('users') as $u) {
+        if ($u['role'] === 'parent' && $u['student_id'] === $studentId) {
+            $ids[] = $u['id'];
+        }
+    }
+    return array_values(array_unique($ids));
+}
+
+/** "🥇" / "🥈" / "🥉" / "4" — medal for the top three. */
+function rank_badge(?int $rank): string
+{
+    return $rank === null ? '–' : ([1 => '🥇', 2 => '🥈', 3 => '🥉'][$rank] ?? (string) $rank);
 }
 
 function student_thread(int $studentId): array

@@ -17,7 +17,7 @@ page_title('🧒', has_feature('timeline') ? 'โปรไฟล์ลูก' : 
         <li><span>🏷️ ชื่อเล่น</span><strong><?= e($child['nickname']) ?></strong></li>
         <li><span>🎒 ห้องเรียน</span><strong><?= e($user['classroom']['name']) ?></strong></li>
         <li><span>👤 ผู้ปกครอง</span><strong><?= e($child['parentName']) ?></strong></li>
-        <?php if (has_feature('stars')): ?><li><span>⭐ ดาวสะสม</span><strong><?= stars_total(student_stars($child['id'])) ?> ดาว</strong></li><?php endif; ?>
+        <?php if (has_feature('stars')): ?><li><span>🏦 ธนาคารความดี</span><strong><?= stars_total(student_stars($child['id'])) ?> ดาว</strong></li><?php endif; ?>
     </ul>
 </section>
 
