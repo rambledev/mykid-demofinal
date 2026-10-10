@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 $user = current_user();
 $summary = permission_summary($user);
-$canReset = in_array($user['role'], ['super_admin', 'admin', 'teacher'], true);
+$canReset = demo_mode() && in_array($user['role'], ['super_admin', 'admin', 'teacher'], true);
 
 mk_header(['id' => $user['role'] . '-account', 'title' => 'บัญชี', 'nav' => 'account']);
 ?>

@@ -1,9 +1,10 @@
 <?php
 /**
- * Mykid — entry page of the Final Demo.
+ * Mykid — entry page (role selection).
  *
- * Role selection only: each card opens the login with the demo account pre-filled and
- * auto-submitted (login.php?role=…&demo=…&go=1). Accounts are read from the app's own data.
+ * DEMO_MODE=1: each card logs straight into that role's demo account (real login flow:
+ *   /login?role=…&demo=…&go=1 pre-fills and submits the form; switching = /logout?… first).
+ * DEMO_MODE=0: each card only opens the login page for that role (phone + PIN required).
  */
 declare(strict_types=1);
 
@@ -31,6 +32,9 @@ $multiParents = array_values(array_filter(store_rows('users'), fn ($u) => $u['ro
 
 /** Link that enters the app as this account (logs the current demo user out first). */
 $enter = function (array $u) use ($current): string {
+    if (!demo_mode()) {
+        return url('login?' . http_build_query(['role' => $u['role']]));
+    }
     $query = http_build_query(['role' => $u['role'], 'demo' => $u['phone'], 'go' => 1]);
     return url(($current ? 'logout?' : 'login?') . $query);
 };
@@ -74,7 +78,7 @@ mk_header(['id' => 'role-select', 'title' => 'เลือกบทบาท', '
                 </span>
                 <span class="role-option__go" aria-hidden="true"><?= icon('next') ?></span>
             </a>
-            <?php if (count($accounts) > 1 || ($role === 'parent' && $multiParents)): ?>
+            <?php if (demo_mode() && (count($accounts) > 1 || ($role === 'parent' && $multiParents))): ?>
                 <div class="role-option__schools" aria-label="เลือกโรงเรียนสำหรับ <?= e($r['title']) ?>">
                     <?php foreach ($accounts as $sid => $u): ?>
                         <a class="chip-btn" href="<?= e($enter($u)) ?>"><?= $schools[$sid]['emoji'] ?? '🏫' ?> <?= e($schools[$sid]['shortName'] ?? '') ?></a>

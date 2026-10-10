@@ -235,7 +235,9 @@ function attendance_counts(array $rows): array
 {
     $counts = array_fill_keys(array_column(mk_catalog()['attendance'], 'code'), 0);
     foreach ($rows as $row) {
-        $counts[$row['status']]++;
+        if (isset($counts[$row['status']])) { // '' = not checked yet (real use, new day)
+            $counts[$row['status']]++;
+        }
     }
     return $counts;
 }

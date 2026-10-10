@@ -313,6 +313,16 @@ function seed_student_daily(array &$t, array $st, string $date, int &$nextId): v
     $t['foodIntake'][] = ['id' => $nextId++] + $base + ['date' => $date, 'levels' => $levels];
 }
 
+/** Real use: today's empty records for one student (attendance not checked yet, nap pending, ...). */
+function seed_student_blank_day(array &$t, array $st, string $date, int &$nextId): void
+{
+    $base = ['school_id' => $st['school_id'], 'classroom_id' => $st['classroom_id'], 'student_id' => $st['id'], 'date' => $date];
+    $t['attendance'][] = ['id' => $nextId++] + $base + ['status' => '', 'checkIn' => '', 'note' => ''];
+    $t['sleepRecords'][] = ['id' => $nextId++] + $base + ['start' => '', 'end' => '', 'quality' => 'pending', 'note' => ''];
+    $t['healthRecords'][] = ['id' => $nextId++] + $base + ['temperature' => null, 'condition' => '', 'symptoms' => '', 'note' => ''];
+    $t['foodIntake'][] = ['id' => $nextId++] + $base + ['levels' => []];
+}
+
 /**
  * Activities and food menus carry a date. Today's rows keep the ids from the school seed;
  * the previous 6 days + one day ~7 months ago (for the image-retention demo) are cloned
@@ -378,11 +388,14 @@ function seed_roll_day(array &$state): void
     $has = array_flip(array_map(fn ($a) => $a['student_id'], array_filter($t['attendance'], fn ($a) => $a['date'] === $today)));
     foreach ($t['students'] as $st) {
         if (!isset($has[$st['id']])) {
-            seed_student_daily($t, $st, $today, $nextId);
+            // DEMO_MODE: realistic random day · real use: an empty daily sheet the teacher fills in
+            demo_mode() ? seed_student_daily($t, $st, $today, $nextId) : seed_student_blank_day($t, $st, $today, $nextId);
         }
     }
     unset($t['__rolling']);
-    seed_pickups_day($t, $today, $nextId);
+    if (demo_mode()) {
+        seed_pickups_day($t, $today, $nextId); // sample pickup requests are demo data only
+    }
 
     $state['seedDate'] = $today;
     mk_log('Seed', 'seed_roll_day END', ['nextId' => $nextId]);

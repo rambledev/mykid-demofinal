@@ -2,6 +2,7 @@
 
 รูปแบบ: Context → Decision → Alternatives → Consequences · สถานะ: `Locked` (ยืนยันโดยเจ้าของโครงการ), `Accepted` (ตาม stack/ข้อกำหนดที่ล็อก), `Proposed` (ข้อเสนอเชิงเทคนิค รอทีมตรวจ)
 
+> Revision 0.5 (2026-10-10): **ADR-021** — public/ web root + router + Clean URL, Secure ID Token, security baseline ([../security.md](../security.md))
 > Revision 0.4 (2026-10-10): **ADR-020** — พัฒนาต่อจากโปรเจกต์นี้ (`mykid-demofinal`) ด้วย PHP ธรรมดา + MariaDB → ADR-001, ADR-002, ADR-014 เป็น `Superseded`
 > Revision 0.3 (2026-10-07, Phase 0.5): ADR-008/009/010/012/013/015 → Accepted/Locked, ADR-014 Locked (repo ใหม่), ADR-017 Accepted (Custom AuthService), ADR-018 (multi-role credential), ADR-019 (FK RESTRICT)
 > Revision 0.2 (2026-10-07): ล็อก Image Retention แบบลบไฟล์อัตโนมัติ (ADR-006), ล็อก Authentication (ADR-016), ระบุ MySQL 8.4 LTS เป็น Production DB, แยก Pending Business / Technical
@@ -157,6 +158,16 @@
 - **Consequences**:
   - เอกสารอื่นใน `docs/production/` ที่อ้างถึง CodeIgniter 4 / MySQL 8.4 / repo `mykid-production` เป็นแบบเดิมก่อน ADR-020 — ใช้เป็นแนวทางด้าน business/security ได้ แต่ต้องปรับรายละเอียดเทคนิคเมื่อทำแต่ละเรื่อง
   - ขั้นต่อไป (ยังไม่ทำ): FK + composite FK ตาม [database.md](database.md), PIN/password แบบ hash (ADR-016), เลิก seed/roll-day อัตโนมัติ, เขียนข้อมูลด้วย SQL ตรงต่อแถวแทน diff ทั้งชุด
+
+### ADR-021 — โครงสร้าง public/ + Router + Clean URL + Secure ID Token + Security baseline · `Locked` (2026-10-10)
+- **Context**: เจ้าของโครงการกำหนดให้ระบบใช้ Clean URL, Dynamic Routing, Secure ID Token/Obfuscated ID, จัดโฟลเดอร์ให้เป็นระเบียบ และมีมาตรฐานความปลอดภัย
+- **Decision**:
+  - Web root = `public/` (front controller `public/index.php` + assets) · โค้ดอยู่ `app/` (config, lib, pages, routes.php) · `database/` · `storage/`
+  - Router จาก route table แบบ allow-list (`app/routes.php`) แทนไฟล์ stub รายหน้า · URL แบบ `/teacher/attendance`
+  - id ทุกตัวที่ออกไปหาเบราว์เซอร์เป็น token (AES-128 block + table tag, key จาก `APP_KEY`) — API ไม่รับ id ตัวเลข
+  - Security baseline ตาม OWASP ASVS L1: PIN hash (Argon2id), login throttling, session hardening, CSRF ทุก state change, CSP + security headers, error ไม่แสดงรายละเอียดเทคนิค — รายละเอียดใน [docs/security.md](../security.md)
+  - `DEMO_MODE` แยกพฤติกรรมทดลอง (เข้าระบบด้วยการ์ด, ข้อมูลสุ่มรายวัน, รีเซ็ต Demo) ออกจากการใช้งานจริง
+- **Consequences**: ลิงก์ต้องสร้างด้วย `url()` / `rurl()` และ id ต้องผ่าน `tok()` / `public_row()` เสมอ; เปลี่ยน `APP_KEY` = token เดิมใช้ไม่ได้ (ข้อมูลไม่กระทบ)
 
 ## Locked Decisions (สรุป)
 **PHP 8.3+ (ไม่ใช้ framework) · MariaDB 11.4 LTS ตาม ADR-020** · Docker + Coolify · Server-rendered HTML + Vanilla JS · Asia/Bangkok ·

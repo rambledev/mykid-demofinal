@@ -17,4 +17,11 @@ if (PHP_SAPI === 'cli-server') {
 
 require dirname(__DIR__) . '/app/bootstrap.php';
 
-mk_dispatch();
+try {
+    mk_dispatch();
+} catch (Throwable $e) {
+    // Details go to the server log only; the user sees a calm, non-technical message.
+    error_log('[Mykid][FrontController][dispatch] ERROR ' . get_class($e) . ': ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine()
+        . ' ' . json_encode(['method' => $_SERVER['REQUEST_METHOD'] ?? '', 'uri' => $_SERVER['REQUEST_URI'] ?? '']));
+    error_page(500, 'ระบบกำลังดำเนินการ', 'กรุณาลองใหม่อีกครั้งในอีกสักครู่');
+}

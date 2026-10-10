@@ -215,6 +215,9 @@ try {
                 authorize($existing !== null && row_in_scope($user, $table, $existing), 'ไม่มีสิทธิ์แก้ไขข้อมูลนอกขอบเขตของบัญชีนี้', ['table' => $table, 'id' => $id]);
                 $row = apply_write_scope($user, $table, array_merge($existing, $data));
                 authorize(row_in_scope($user, $table, $row), 'ไม่มีสิทธิ์ย้ายข้อมูลออกนอกขอบเขตของบัญชีนี้', ['table' => $table, 'id' => $id]);
+                if ($table === 'attendance' && in_array($row['status'] ?? '', ['present', 'late'], true) && ($row['checkIn'] ?? '') === '') {
+                    $row['checkIn'] = date('H:i'); // first "มาเรียน / มาสาย" tap records the arrival time
+                }
                 if ($table === 'students' && isset($row['classroom_id'])) {
                     $row['classroom'] = find_row('classrooms', $row['classroom_id'])['name'] ?? '';
                 }
@@ -425,6 +428,7 @@ try {
             break;
 
         case 'reset_demo':
+            authorize(demo_mode(), 'ไม่สามารถดำเนินการได้', ['reason' => 'DEMO_MODE off']); // never wipes real data
             authorize(in_array($user['role'], ['super_admin', 'admin', 'teacher'], true), 'บัญชีนี้ไม่มีสิทธิ์รีเซ็ตข้อมูล', ['role' => $user['role']]);
             store_reset_scope(function (string $table, array $row) use ($user) {
                 if ($user['role'] === 'teacher' && !can_write_table($user, $table)) {
