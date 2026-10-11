@@ -30,6 +30,10 @@ php -d upload_max_filesize=12M -d post_max_size=64M -d memory_limit=256M -S 127.
   `--allow-weak-pin`; change it after the first login (/admin/users → edit your own account).
 - `php database/install.php --admin-phone=08xxxxxxxx --admin-pin=xxxxxx` adds an admin to the existing school, or resets
   the PIN of an existing admin (forgotten PIN) — nothing else is touched.
+- Teacher and parent login accounts follow the admin's records ([app/lib/accounts.php](app/lib/accounts.php)): the
+  teacher form has phone + PIN (account created / updated, removed with the teacher); the student form has the parent's
+  phone + PIN (one phone = one parent account linked to every child with that phone; removed when no child is left).
+  An empty PIN on edit keeps the current one.
 - Every user can change their own PIN on the account page (current PIN + new PIN twice; easy PINs such as 000000 /
   123456 are refused; wrong current PINs count toward the login lock).
 - `php database/check.php` tests the connection; missing tables / new columns are applied automatically (`schema.sql`).

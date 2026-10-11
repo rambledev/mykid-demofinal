@@ -55,6 +55,7 @@ require_once MK_LIB . '/notifications.php';
 require_once MK_LIB . '/chat.php';
 require_once MK_LIB . '/pickup.php';
 require_once MK_LIB . '/auth.php';
+require_once MK_LIB . '/accounts.php';
 require_once MK_LIB . '/data-filter.php';
 require_once MK_LIB . '/components.php';
 require_once MK_LIB . '/charts.php';

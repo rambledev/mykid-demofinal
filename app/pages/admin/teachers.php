@@ -1,5 +1,5 @@
 <?php
-/** Admin — teacher management and classroom assignment (own school). */
+/** Admin — teacher management, classroom assignment and the teachers' login accounts (phone + PIN). */
 declare(strict_types=1);
 
 $rooms = my_classrooms();
@@ -16,6 +16,8 @@ filter_bar('teachers', array_column(array_map(fn ($r) => ['k' => tok('classrooms
                 <strong><?= e($t['nickname']) ?></strong>
                 <small><?= e($t['fullName']) ?></small>
                 <span class="chip"><?= $room['emoji'] ?? '' ?> ห้อง<?= e($room['name'] ?? '-') ?></span>
+                <?php $account = teacher_account($t['id']); ?>
+                <small><?= $account ? '🔑 เข้าสู่ระบบด้วย ' . e($account['phone']) : '⚠️ ยังไม่มีบัญชีเข้าสู่ระบบ — กดแก้ไขเพื่อตั้ง PIN' ?></small>
             </div>
             <div class="person__actions"><?= btn_edit('teachers', $t) ?><?= btn_delete('teachers', $t['id'], $t['nickname']) ?></div>
         </article>

@@ -172,8 +172,9 @@ try {
             authorize(can_write_table($user, $table), 'บัญชีนี้ไม่มีสิทธิ์แก้ไขข้อมูลนี้', ['user' => $user['id'], 'role' => $user['role'], 'table' => $table]);
             authorize($table !== 'pickups', 'กรุณาใช้เมนูรับ-ส่ง', ['table' => $table]); // status flow: pickup_* actions only
             $id = in_id($input, 'id', $table);
-            if ($table === 'users' && $id && trim((string) ($input['data']['pin'] ?? '')) === '') {
-                unset($input['data']['pin']); // edit without a new PIN = keep the current one (never sent to the browser)
+            $pinKey = ['users' => 'pin', 'teachers' => 'pin', 'students' => 'parentPin'][$table] ?? null;
+            if ($pinKey && trim((string) ($input['data'][$pinKey] ?? '')) === '') {
+                unset($input['data'][$pinKey]); // no new PIN = keep the current one (PINs are never sent to the browser)
             }
             $data = validate_fields($table, (array) ($input['data'] ?? []), $id === 0);
             if ($id === 0) {
@@ -189,6 +190,13 @@ try {
                     throw new ValidationException('อัปโหลดได้ครั้งละไม่เกิน ' . MEDIA_MAX_FILES . ' รูป');
                 }
                 array_map('validate_image_upload', $pending); // reject bad files BEFORE saving the work
+            }
+            // Login accounts that follow teacher / student records (app/lib/accounts.php) — checked BEFORE saving.
+            $accountPin = null;
+            if (in_array($table, ['teachers', 'students'], true)) {
+                $accountPin = ($data[$pinKey] ?? '') !== '' ? (string) $data[$pinKey] : null;
+                unset($data[$pinKey]); // the PIN lives only (hashed) on the account
+                $table === 'teachers' ? account_check_teacher($id, $data, $accountPin) : account_check_parent($id, $data, $accountPin);
             }
             $cameraFlags = null;
             if ($table === 'cameras') {
@@ -255,6 +263,15 @@ try {
                 $savedId = $newId;
                 $message = 'เพิ่ม' . table_def($table)['label'] . 'เรียบร้อยแล้ว';
             }
+            if ($table === 'teachers') {
+                $hadAccount = teacher_account($savedId) !== null;
+                account_sync_teacher($savedId, $accountPin);
+                $message .= $hadAccount ? ($accountPin !== null ? ' · ตั้ง PIN ใหม่ให้ครูแล้ว' : '') : ' · สร้างบัญชีเข้าสู่ระบบของครูแล้ว';
+            } elseif ($table === 'students') {
+                account_sync_parent($savedId, $accountPin);
+                $parentPhone = (string) (find_row('students', $savedId)['parentPhone'] ?? '');
+                $message .= $parentPhone !== '' ? ' · บัญชีผู้ปกครอง ' . $parentPhone . ' พร้อมใช้งาน' : '';
+            }
             if ($table === 'portfolio' && ($files = uploaded_files())) {
                 // Portfolio images: the work was just saved inside the user's scope (apply_write_scope).
                 authorize(has_feature('media') && can_write_table($user, 'mediaFiles'), 'บัญชีนี้ไม่มีสิทธิ์อัปโหลดรูปภาพ', ['role' => $user['role']]);
@@ -309,6 +326,11 @@ try {
             }
             authorize($table !== 'users' || in_array($existing['role'], ['admin', 'executive'], true), 'ลบได้เฉพาะบัญชีผู้ดูแลโรงเรียนและผู้บริหาร', ['id' => $id]);
             store_delete($table, $id, fn ($old) => authorize(row_in_scope($user, $table, $old), 'ไม่มีสิทธิ์ลบข้อมูลนี้'));
+            if ($table === 'teachers') {
+                account_remove_teacher($id); // the teacher's login account goes with the record
+            } elseif ($table === 'students') {
+                account_unlink_student($id); // parent accounts without any child left are removed
+            }
             if ($table === 'cameras') {
                 store_mutate(function (array &$state) use ($id) {
                     $state['tables']['cameraPermissions'] = array_values(array_filter($state['tables']['cameraPermissions'], fn ($p) => $p['camera_id'] !== $id));

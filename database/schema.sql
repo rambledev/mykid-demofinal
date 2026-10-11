@@ -424,6 +424,9 @@ ALTER TABLE stars ADD COLUMN IF NOT EXISTS recipient VARCHAR(10) NOT NULL DEFAUL
 ALTER TABLE stars ADD COLUMN IF NOT EXISTS parent_id INT UNSIGNED NULL AFTER recipient;
 ALTER TABLE stars ADD INDEX IF NOT EXISTS idx_recipient_date (recipient, date);
 
+-- Parent login account phone kept on the student record (app/lib/accounts.php).
+ALTER TABLE students ADD COLUMN IF NOT EXISTS parentPhone VARCHAR(20) NULL AFTER parentRelation;
+
 -- Chat: when the OTHER side read the message (NULL = unread) → unread badges + "อ่านแล้ว".
 ALTER TABLE messages ADD COLUMN IF NOT EXISTS read_at DATETIME NULL AFTER at;
 ALTER TABLE messages ADD INDEX IF NOT EXISTS idx_student_read (student_id, read_at);

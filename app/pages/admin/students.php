@@ -1,5 +1,5 @@
 <?php
-/** Admin — student management (whole own school; add / edit / delete). */
+/** Admin — student management (whole own school) + the parent's login account (phone + PIN). */
 declare(strict_types=1);
 
 $rooms = my_classrooms();
@@ -16,7 +16,7 @@ filter_bar('students', array_column(array_map(fn ($r) => ['k' => tok('classrooms
                 <strong><?= e($s['nickname']) ?></strong>
                 <small><?= e($s['name']) ?></small>
                 <span class="chip"><?= $room['emoji'] ?? '' ?> <?= e($room['name'] ?? '-') ?></span>
-                <small>👤 <?= e($s['parentName']) ?></small>
+                <small>👤 <?= e($s['parentName']) ?><?= ($s['parentPhone'] ?? '') !== '' ? ' · 🔑 ' . e($s['parentPhone']) : ' · ⚠️ ยังไม่มีบัญชีผู้ปกครอง' ?></small>
             </div>
             <div class="person__actions"><?= btn_edit('students', $s) ?><?= btn_delete('students', $s['id'], $s['nickname']) ?></div>
         </article>
