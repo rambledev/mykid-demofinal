@@ -36,6 +36,10 @@ php -d upload_max_filesize=12M -d post_max_size=64M -d memory_limit=256M -S 127.
   An empty PIN on edit keeps the current one.
 - Every user can change their own PIN on the account page (current PIN + new PIN twice; easy PINs such as 000000 /
   123456 are refused; wrong current PINs count toward the login lock).
+- `php database/import-school.php [file] [--confirm]` imports the school's real classrooms, teachers (+ login accounts,
+  PIN from the file) and students from `database/data/school.json` (format: `school.example.json`). That file holds
+  children's names, so it is gitignored / dockerignored (PDPA) and stays on the admin's machine. Dry run by default;
+  re-running updates instead of duplicating. Parents get accounts when the admin enters their phone + PIN.
 - `php database/check.php` tests the connection; missing tables / new columns are applied automatically (`schema.sql`).
 
 ### Every school day

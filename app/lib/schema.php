@@ -44,6 +44,8 @@ function mk_tables(): array
         ]],
         'classrooms' => ['label' => 'ห้องเรียน', 'level' => 'classroom_self', 'fields' => [
             'name'     => ['label' => 'ชื่อห้อง', 'type' => 'text', 'required' => true, 'max' => 40],
+            'level'    => ['label' => 'ระดับชั้น', 'type' => 'text', 'max' => 40, 'placeholder' => 'เช่น อนุบาล'],
+            'ageRange' => ['label' => 'ช่วงอายุ', 'type' => 'text', 'max' => 20, 'placeholder' => 'เช่น 3-4 ปี'],
             'emoji'    => ['label' => 'สัญลักษณ์', 'type' => 'select', 'options' => ['🐣' => '🐣', '🐰' => '🐰', '🦁' => '🦁', '🐼' => '🐼', '🐨' => '🐨', '🦊' => '🦊', '🐧' => '🐧', '🐬' => '🐬', '🦄' => '🦄']],
             'color'    => ['label' => 'สีประจำห้อง', 'type' => 'select', 'options' => 'roomColors'],
             'capacity' => ['label' => 'จำนวนที่รับได้', 'type' => 'number', 'min' => 1, 'max' => 40],

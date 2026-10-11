@@ -11,7 +11,7 @@ page_title('🏫', 'ห้องเรียน', count(my_classrooms()) . ' ห
         <article class="room-card" style="--room-bg: <?= e($room['color']) ?>">
             <header class="room-card__head">
                 <span class="room-card__emoji" aria-hidden="true"><?= $room['emoji'] ?></span>
-                <h2><?= e($room['name']) ?></h2>
+                <h2><?= e($room['name']) ?><?php if (($room['level'] ?? '') !== '' || ($room['ageRange'] ?? '') !== ''): ?><small class="hint"> · <?= e(trim(($room['level'] ?? '') . ' ' . ($room['ageRange'] ?? ''))) ?></small><?php endif; ?></h2>
                 <div class="person__actions"><?= btn_edit('classrooms', $room) ?><?= btn_delete('classrooms', $room['id'], $room['name']) ?></div>
             </header>
             <div class="stat-row">

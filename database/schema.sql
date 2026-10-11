@@ -424,6 +424,11 @@ ALTER TABLE stars ADD COLUMN IF NOT EXISTS recipient VARCHAR(10) NOT NULL DEFAUL
 ALTER TABLE stars ADD COLUMN IF NOT EXISTS parent_id INT UNSIGNED NULL AFTER recipient;
 ALTER TABLE stars ADD INDEX IF NOT EXISTS idx_recipient_date (recipient, date);
 
+-- School code + classroom level / age range (database/import-school.php, admin classroom form).
+ALTER TABLE schools ADD COLUMN IF NOT EXISTS code VARCHAR(20) NULL AFTER shortName;
+ALTER TABLE classrooms ADD COLUMN IF NOT EXISTS level VARCHAR(40) NULL AFTER name;
+ALTER TABLE classrooms ADD COLUMN IF NOT EXISTS ageRange VARCHAR(20) NULL AFTER level;
+
 -- Parent login account phone kept on the student record (app/lib/accounts.php).
 ALTER TABLE students ADD COLUMN IF NOT EXISTS parentPhone VARCHAR(20) NULL AFTER parentRelation;
 

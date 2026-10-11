@@ -1,0 +1,17 @@
+{
+    "_comment": "Example only (made-up names). Copy to database/data/school.json — that file stays on this machine (gitignored, PDPA) — then: php database/import-school.php",
+    "school": { "name": "โรงเรียนตัวอย่าง", "shortName": "รร.ตัวอย่าง", "code": "EX001", "status": "active" },
+    "teacherPin": "123456",
+    "classrooms": [
+        {
+            "name": "เตรียมอนุบาล 1",
+            "level": "อนุบาล",
+            "ageRange": "2-3 ปี",
+            "teacher": { "name": "คุณครูสมใจ ใจดี", "phone": "0800000001" },
+            "students": [
+                { "name": "เด็กชาย สมชาย ตัวอย่าง", "nickname": "น้องเอ" },
+                { "name": "เด็กหญิง สมหญิง ตัวอย่าง", "nickname": "น้องบี" }
+            ]
+        }
+    ]
+}
