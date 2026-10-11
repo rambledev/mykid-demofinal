@@ -35,6 +35,7 @@ return [
             ['storage', 'จัดการพื้นที่จัดเก็บ', 'admin/storage.php', 'image', false],
             ['users', 'ผู้ดูแลและผู้บริหาร', 'admin/users.php', 'users', false],
             ['settings', 'ตั้งค่าโรงเรียน', 'admin/settings.php', 'settings', false],
+            ['system', 'จัดการระบบ', 'admin/system.php', 'settings', false],
             ['account', 'บัญชี', 'admin/account.php', 'user', false],
         ],
         'executive' => [

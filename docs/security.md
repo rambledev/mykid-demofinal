@@ -20,6 +20,8 @@ This is the standard every change must keep (OWASP ASVS level 1 style). The code
   - Seeded PINs are hashed before they reach the database.
   - Legacy or old-algorithm hashes are upgraded on the next login.
   - A PIN is never rendered back to the browser. Leaving the PIN empty on edit keeps the current one.
+- **Default PIN.** Accounts created by the admin (and admin PIN resets) start with `123456` and `must_change_pin`; the
+  router and the API allow nothing but the set-PIN page until the user picks their own PIN (easy PINs refused).
 - **Throttling.** Failures are counted in the `login_attempts` table over a 15-minute window.
   - 5 failures for one phone lock that phone.
   - 20 failures from one IP lock that IP.

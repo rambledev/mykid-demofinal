@@ -18,28 +18,23 @@ It started as a copy of **Mykid Final Demo v1.0** and is now the real system —
 ```bash
 cd ~/Desktop/product/mykid-demofinal
 cp .env.example .env            # first time only — fill in DB_PASS and APP_KEY (openssl rand -base64 48)
-php database/install.php --school="ศูนย์พัฒนาเด็กเล็กบ้านโพนสูง" --short="ศพด.บ้านโพนสูง" --province="..." \
-    --admin-name="ชื่อผู้ดูแล" --admin-phone=08xxxxxxxx --admin-pin=xxxxxx   # first time only
+php database/install.php --school="โรงเรียนโพนสูง"   # first time only: school + default admin 0820000000 / 123456
 php -d upload_max_filesize=12M -d post_max_size=64M -d memory_limit=256M -S 127.0.0.1:8081 -t public public/index.php
 ```
 
-- There is **no demo data**: install creates only the tables, the school and the first admin account; the admin enters
-  classrooms, teachers, students and accounts. Until a school exists, every page shows "ระบบยังไม่พร้อมใช้งาน".
-- `php database/install.php --reset --school=... ...` drops every table (all data is lost) and sets up again. Every
-  argument is validated first — a wrong value stops before anything is dropped. An easy PIN (000000, 123456, …) needs
-  `--allow-weak-pin`; change it after the first login (/admin/users → edit your own account).
-- `php database/install.php --admin-phone=08xxxxxxxx --admin-pin=xxxxxx` adds an admin to the existing school, or resets
-  the PIN of an existing admin (forgotten PIN) — nothing else is touched.
-- Teacher and parent login accounts follow the admin's records ([app/lib/accounts.php](app/lib/accounts.php)): the
-  teacher form has phone + PIN (account created / updated, removed with the teacher); the student form has the parent's
-  phone + PIN (one phone = one parent account linked to every child with that phone; removed when no child is left).
-  An empty PIN on edit keeps the current one.
-- Every user can change their own PIN on the account page (current PIN + new PIN twice; easy PINs such as 000000 /
-  123456 are refused; wrong current PINs count toward the login lock).
-- `php database/import-school.php [file] [--confirm]` imports the school's real classrooms, teachers (+ login accounts,
-  PIN from the file) and students from `database/data/school.json` (format: `school.example.json`). That file holds
-  children's names, so it is gitignored / dockerignored (PDPA) and stays on the admin's machine. Dry run by default;
-  re-running updates instead of duplicating. Parents get accounts when the admin enters their phone + PIN.
+- There is **no demo data**: install creates the tables, the school and the default admin **0820000000 / PIN 123456**.
+  Until a school exists, every page shows "ระบบยังไม่พร้อมใช้งาน".
+- **Default PIN + first login:** every account the admin creates (teachers, parents, admins / executives) and every
+  admin PIN reset starts with PIN `123456`; the first login goes to **ตั้งรหัส PIN** and nothing else works until the
+  user sets their own PIN (easy PINs refused). Users change it later on the account page.
+- **Admin → จัดการระบบ** (`/admin/system`):
+  - **นำเข้า Seed Data** — upload JSON files (teachers + classrooms, students; formats: `database/data/*.example.json`),
+    check first, then import. Re-importing updates instead of duplicating. CLI twin: `php database/import-school.php`.
+    The real files (`database/data/seed-teachers.json`, `seed-students.json`) hold children's names → gitignored (PDPA).
+  - **ล้างข้อมูลระบบ** — type "ล้างข้อมูล" + own PIN: removes everything except the school, its settings and the
+    admin accounts (also the uploaded images).
+- 🔑 buttons on the teacher / student / user lists reset a forgotten PIN to `123456`.
+- `php database/install.php --reset --school=...` drops every table (all data is lost) and sets up again.
 - `php database/check.php` tests the connection; missing tables / new columns are applied automatically (`schema.sql`).
 
 ### Every school day

@@ -6,11 +6,37 @@
  *                                one parent phone = one account, so a parent of several children
  *                                is linked to every child.
  *
- * The admin types the phone + an initial PIN on the teacher / student form (PIN is never stored on
- * the people record and never shown again); the owner changes it on the account page.
- * check_* run BEFORE the record is saved (nothing is written when they fail), sync_* right after.
+ * The admin only types the phone: a new account starts with DEFAULT_PIN (123456) and must_change_pin,
+ * so the owner sets their own PIN at the first login. account_reset_pin() puts a forgotten PIN back
+ * to the default. check_* run BEFORE the record is saved (nothing is written when they fail), sync_* after.
  */
 declare(strict_types=1);
+
+/** PIN fields of a brand-new account: the default PIN, to be replaced at the first login. */
+function account_default_pin(): array
+{
+    static $hash = null;
+    return ['pin' => $hash ??= pin_hash(DEFAULT_PIN), 'must_change_pin' => true];
+}
+
+/** Admin: put a user's PIN back to the default (forgotten PIN); they set a new one at the next login. */
+function account_reset_pin(array $admin, int $userId): array
+{
+    $target = find_row('users', $userId);
+    authorize($target !== null && $target['school_id'] === $admin['school_id'] && $target['id'] !== $admin['id'],
+        'ไม่สามารถรีเซ็ต PIN ของบัญชีนี้ได้', ['admin' => $admin['id'], 'user' => $userId]);
+    store_mutate(function (array &$state) use ($userId) {
+        foreach ($state['tables']['users'] as &$u) {
+            if ($u['id'] === $userId) {
+                $u = array_merge($u, ['pin' => pin_hash(DEFAULT_PIN), 'must_change_pin' => true]);
+            }
+        }
+        unset($u);
+    });
+    mk_db()->prepare('DELETE FROM login_attempts WHERE phone = ?')->execute([$target['phone']]); // unlock
+    mk_log('Accounts', 'pin reset by admin', ['admin' => $admin['id'], 'user' => $userId]);
+    return $target;
+}
 
 /** Teacher account linked to a teacher record (null = none yet). */
 function teacher_account(int $teacherId): ?array
@@ -34,7 +60,7 @@ function account_by_phone(string $phone): ?array
 }
 
 /** Validate a teacher save (phone free for this teacher, PIN given when the account is new). */
-function account_check_teacher(int $teacherId, array $data, ?string $pin): void
+function account_check_teacher(int $teacherId, array $data): void
 {
     $phone = (string) ($data['phone'] ?? ($teacherId ? (find_row('teachers', $teacherId)['phone'] ?? '') : ''));
     if ($phone === '') {
@@ -45,31 +71,28 @@ function account_check_teacher(int $teacherId, array $data, ?string $pin): void
     if ($other && (!$own || $other['id'] !== $own['id'])) {
         throw new ValidationException('เบอร์ ' . $phone . ' มีผู้ใช้งานแล้ว (' . role_meta($other['role'])['th'] . ') กรุณาใช้เบอร์อื่น');
     }
-    if (!$own && $pin === null) {
-        throw new ValidationException('กรุณาตั้ง PIN 6 หลักสำหรับให้ครูเข้าสู่ระบบครั้งแรก');
-    }
 }
 
 /** Create / update the teacher's account after the teacher record was saved. */
-function account_sync_teacher(int $teacherId, ?string $pin): void
+function account_sync_teacher(int $teacherId): void
 {
     $teacher = find_row('teachers', $teacherId);
     $own = teacher_account($teacherId);
-    store_mutate(function (array &$state) use ($teacher, $own, $pin) {
+    store_mutate(function (array &$state) use ($teacher, $own) {
         $fields = ['name' => $teacher['nickname'], 'phone' => $teacher['phone'], 'school_id' => $teacher['school_id'],
             'classroom_id' => $teacher['classroom_id'], 'teacher_id' => $teacher['id']];
         if ($own) {
             foreach ($state['tables']['users'] as &$u) {
                 if ($u['id'] === $own['id']) {
-                    $u = array_merge($u, $fields, $pin !== null ? ['pin' => pin_hash($pin)] : []);
+                    $u = array_merge($u, $fields);
                 }
             }
             unset($u);
             return;
         }
-        $state['tables']['users'][] = ['id' => $state['nextId']++, 'role' => 'teacher', 'pin' => pin_hash((string) $pin), 'student_id' => null] + $fields;
+        $state['tables']['users'][] = ['id' => $state['nextId']++, 'role' => 'teacher', 'student_id' => null] + account_default_pin() + $fields;
     });
-    mk_log('Accounts', 'teacher account synced', ['teacher' => $teacherId, 'created' => !$own, 'pinChanged' => $pin !== null]);
+    mk_log('Accounts', 'teacher account synced', ['teacher' => $teacherId, 'created' => !$own]);
 }
 
 /** Delete the account of a removed teacher (and the account's own notifications). */
@@ -87,21 +110,15 @@ function account_remove_teacher(int $teacherId): void
 }
 
 /** Validate a student save: the parent phone may be new (PIN needed) or an existing parent account. */
-function account_check_parent(int $studentId, array $data, ?string $pin): void
+function account_check_parent(int $studentId, array $data): void
 {
     $phone = (string) ($data['parentPhone'] ?? ($studentId ? (find_row('students', $studentId)['parentPhone'] ?? '') : ''));
     if ($phone === '') {
-        if ($pin !== null) {
-            throw new ValidationException('กรุณากรอกเบอร์โทรผู้ปกครองก่อนตั้ง PIN');
-        }
         return; // no parent account (yet)
     }
     $other = account_by_phone($phone);
     if ($other && $other['role'] !== 'parent') {
         throw new ValidationException('เบอร์ ' . $phone . ' เป็นบัญชี' . role_meta($other['role'])['th'] . 'อยู่แล้ว กรุณาใช้เบอร์อื่นสำหรับผู้ปกครอง');
-    }
-    if (!$other && $pin === null) {
-        throw new ValidationException('กรุณาตั้ง PIN 6 หลักสำหรับให้ผู้ปกครองเข้าสู่ระบบครั้งแรก');
     }
 }
 
@@ -109,12 +126,12 @@ function account_check_parent(int $studentId, array $data, ?string $pin): void
  * After a student save: link the child to the parent account of parentPhone (create it when new),
  * and unlink a previous parent account whose phone was replaced.
  */
-function account_sync_parent(int $studentId, ?string $pin): void
+function account_sync_parent(int $studentId): void
 {
     $student = find_row('students', $studentId);
     $phone = (string) ($student['parentPhone'] ?? '');
     $parent = $phone !== '' ? account_by_phone($phone) : null;
-    store_mutate(function (array &$state) use ($student, $phone, $parent, $pin) {
+    store_mutate(function (array &$state) use ($student, $phone, $parent) {
         $t = &$state['tables'];
         $relation = $student['parentRelation'] ?: 'แม่';
         // Unlink accounts of an old phone number from this child.
@@ -129,9 +146,6 @@ function account_sync_parent(int $studentId, ?string $pin): void
                 if ($u['id'] === $parent['id']) {
                     $u['name'] = $student['parentName'] ?: $u['name'];
                     $u['relation'] = $relation;
-                    if ($pin !== null) {
-                        $u['pin'] = pin_hash($pin);
-                    }
                     if (!find_row('students', (int) $u['student_id'])) {
                         $u['student_id'] = $student['id']; // primary child no longer exists
                         $u['classroom_id'] = $student['classroom_id'];
@@ -143,8 +157,8 @@ function account_sync_parent(int $studentId, ?string $pin): void
         } else {
             $parentId = $state['nextId']++;
             $t['users'][] = ['id' => $parentId, 'name' => $student['parentName'] ?: 'ผู้ปกครองของ' . $student['nickname'], 'phone' => $phone,
-                'pin' => pin_hash((string) $pin), 'role' => 'parent', 'school_id' => $student['school_id'], 'classroom_id' => $student['classroom_id'],
-                'student_id' => $student['id'], 'teacher_id' => null, 'relation' => $relation];
+                'role' => 'parent', 'school_id' => $student['school_id'], 'classroom_id' => $student['classroom_id'],
+                'student_id' => $student['id'], 'teacher_id' => null, 'relation' => $relation] + account_default_pin();
         }
         $linked = array_filter($t['parentStudents'], fn ($l) => $l['student_id'] === $student['id'] && $l['user_id'] === $parentId);
         if ($parentId && !$linked) {

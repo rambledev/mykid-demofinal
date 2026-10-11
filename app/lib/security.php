@@ -147,6 +147,12 @@ function pin_hash(string $pin): string
     return password_hash($pin, pin_algo());
 }
 
+/**
+ * Every account the admin creates (and every admin PIN reset) starts with this PIN and is flagged
+ * must_change_pin: the first login goes straight to "ตั้งรหัส PIN ใหม่" before anything else.
+ */
+const DEFAULT_PIN = '123456';
+
 /** Easy-to-guess PINs: all the same digit, or a straight run (123456, 654321, ...). */
 function pin_is_weak(string $pin): bool
 {

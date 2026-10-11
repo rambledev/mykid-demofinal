@@ -17,9 +17,9 @@ filter_bar('teachers', array_column(array_map(fn ($r) => ['k' => tok('classrooms
                 <small><?= e($t['fullName']) ?></small>
                 <span class="chip"><?= $room['emoji'] ?? '' ?> ห้อง<?= e($room['name'] ?? '-') ?></span>
                 <?php $account = teacher_account($t['id']); ?>
-                <small><?= $account ? '🔑 เข้าสู่ระบบด้วย ' . e($account['phone']) : '⚠️ ยังไม่มีบัญชีเข้าสู่ระบบ — กดแก้ไขเพื่อตั้ง PIN' ?></small>
+                <small><?= $account ? '🔑 เข้าสู่ระบบด้วย ' . e($account['phone']) . ($account['must_change_pin'] ? ' · ยังไม่ได้ตั้ง PIN เอง' : '') : '⚠️ ยังไม่มีบัญชีเข้าสู่ระบบ — กดแก้ไขแล้วบันทึกเพื่อสร้างบัญชี' ?></small>
             </div>
-            <div class="person__actions"><?= btn_edit('teachers', $t) ?><?= btn_delete('teachers', $t['id'], $t['nickname']) ?></div>
+            <div class="person__actions"><?= $account ? btn_reset_pin($account) : '' ?><?= btn_edit('teachers', $t) ?><?= btn_delete('teachers', $t['id'], $t['nickname']) ?></div>
         </article>
     <?php endforeach; ?>
 </div>

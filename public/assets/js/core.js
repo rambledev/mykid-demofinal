@@ -310,12 +310,75 @@
     $$('[data-chat-scroll]').forEach((box) => { box.scrollTop = box.scrollHeight; });
   }
 
+  /** Admin "จัดการระบบ": seed import (preview → confirm), system reset, PIN reset. */
+  const System = {
+    async seed(form, submitter) {
+      const mode = submitter && submitter.dataset.seedMode === 'confirm' ? 'confirm' : 'preview';
+      const files = Array.from(form.elements.files.files || []);
+      const errorEl = $('[data-form-error]', form);
+      const report = $('[data-seed-report]', form);
+      const confirmBtn = form.querySelector('[data-seed-mode="confirm"]');
+      if (!files.length) { errorEl.textContent = 'กรุณาเลือกไฟล์ Seed Data (.json)'; errorEl.hidden = false; return; }
+      if (mode === 'confirm') {
+        const ok = await confirmDialog({ title: 'นำเข้า Seed Data?', message: 'ข้อมูลห้องเรียน ครู และนักเรียนจากไฟล์จะถูกบันทึกลงระบบ', icon: '📥', okLabel: 'นำเข้า' });
+        if (!ok) return;
+      }
+      errorEl.hidden = true;
+      setBusy(submitter, true);
+      try {
+        const data = await api('import_seed', { mode }, { files });
+        report.innerHTML = '';
+        data.report.forEach((line) => { const li = document.createElement('li'); li.textContent = line; report.appendChild(li); });
+        report.hidden = false;
+        confirmBtn.disabled = data.written; // after a preview the import can be confirmed
+        toast(data.message);
+        if (data.written) { form.reset(); await refreshLive(); }
+      } catch (error) {
+        errorEl.textContent = error instanceof UserError ? error.message : 'กรุณาลองใหม่อีกครั้ง';
+        errorEl.hidden = false;
+        confirmBtn.disabled = true;
+      } finally {
+        setBusy(submitter, false);
+      }
+    },
+
+    async reset(form) {
+      const errorEl = $('[data-form-error]', form);
+      const phrase = form.elements.phrase.value.trim();
+      const pin = form.elements.pin.value.trim();
+      if (phrase !== 'ล้างข้อมูล') { errorEl.textContent = 'กรุณาพิมพ์คำว่า “ล้างข้อมูล” เพื่อยืนยัน'; errorEl.hidden = false; return; }
+      if (!/^\d{6}$/.test(pin)) { errorEl.textContent = 'กรุณากรอกรหัส PIN 6 หลักของคุณ'; errorEl.hidden = false; return; }
+      const ok = await confirmDialog({ title: 'ล้างข้อมูลทั้งหมด?', message: 'ข้อมูลทั้งหมดยกเว้นโรงเรียนและบัญชีผู้ดูแลจะถูกลบ และย้อนกลับไม่ได้', icon: '⚠️', okLabel: 'ล้างข้อมูล' });
+      if (!ok) return;
+      errorEl.hidden = true;
+      const button = form.querySelector('[type="submit"]');
+      setBusy(button, true);
+      try {
+        const data = await api('system_reset', { phrase, pin });
+        form.reset();
+        toast(data.message);
+        if (data.redirect) setTimeout(() => { window.location.href = data.redirect; }, 1500);
+      } catch (error) {
+        errorEl.textContent = error instanceof UserError ? error.message : 'กรุณาลองใหม่อีกครั้ง';
+        errorEl.hidden = false;
+      } finally {
+        setBusy(button, false);
+      }
+    },
+
+    async resetPin(button) {
+      const ok = await confirmDialog({ title: 'รีเซ็ต PIN?', message: `PIN ของ “${button.dataset.label}” จะกลับเป็นรหัสเริ่มต้น และต้องตั้ง PIN ใหม่เมื่อเข้าสู่ระบบครั้งถัดไป`, icon: '🔑', okLabel: 'รีเซ็ต PIN' });
+      if (ok) await runAction(button, 'reset_pin', { user: button.dataset.user });
+    },
+  };
+
   /** Account page: change the own PIN (current + new + confirm). */
   async function changePin(form) {
-    const values = Object.fromEntries(['current', 'new', 'confirm'].map((k) => [k, form.elements[k].value.trim()]));
+    const first = 'firstSetup' in form.dataset; // first login: no current PIN to type
+    const values = Object.fromEntries(['current', 'new', 'confirm'].map((k) => [k, form.elements[k] ? form.elements[k].value.trim() : '']));
     const errorEl = $('[data-form-error]', form);
     const fail = (msg, field) => { errorEl.textContent = msg; errorEl.hidden = false; if (field) form.elements[field].focus(); };
-    if (!/^\d{6}$/.test(values.current)) return fail('กรุณากรอกรหัส PIN ปัจจุบัน 6 หลัก', 'current');
+    if (!first && !/^\d{6}$/.test(values.current)) return fail('กรุณากรอกรหัส PIN ปัจจุบัน 6 หลัก', 'current');
     if (!/^\d{6}$/.test(values.new)) return fail('รหัส PIN ใหม่ต้องเป็นตัวเลข 6 หลัก', 'new');
     if (values.new !== values.confirm) return fail('รหัส PIN ใหม่ทั้งสองช่องไม่ตรงกัน', 'confirm');
     errorEl.hidden = true;
@@ -326,6 +389,7 @@
       if (data.csrf) CFG.csrf = data.csrf; // session id was renewed
       form.reset();
       toast(data.message);
+      if (data.redirect) setTimeout(() => { window.location.href = data.redirect; }, 900);
     } catch (error) {
       fail(error instanceof UserError ? error.message : 'กรุณาลองใหม่อีกครั้ง');
     } finally {
@@ -1139,6 +1203,7 @@
     'notification-open': (b) => Notifications.open(b),
     'notification-read-all': (b) => Notifications.readAll(b),
     'pickup-update': (b) => Pickup.update(b),
+    'reset-pin': (b) => System.resetPin(b),
     'cctv-open': openViewer,
     'cctv-close': closeViewer,
     'cctv-fullscreen': toggleFullscreen,
@@ -1191,6 +1256,8 @@
     else if (form.matches('[data-meal-form]')) { event.preventDefault(); saveMeal(form); }
     else if (form.matches('[data-chat-form]')) { event.preventDefault(); sendMessage(form); }
     else if (form.matches('[data-pin-form]')) { event.preventDefault(); changePin(form); }
+    else if (form.matches('[data-seed-form]')) { event.preventDefault(); System.seed(form, event.submitter); }
+    else if (form.matches('[data-reset-form]')) { event.preventDefault(); System.reset(form); }
     else if (form.matches('[data-upload-form]')) { event.preventDefault(); submitUpload(form); }
     else if (form.matches('[data-student-status-form]')) { event.preventDefault(); StudentStatus.save(form); }
   });

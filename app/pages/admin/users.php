@@ -26,6 +26,7 @@ filter_bar('users', [], 'ค้นหาชื่อหรือเบอร์�
                 <span class="chip"><?= e(role_meta($u['role'])['th']) ?></span>
             </div>
             <div class="person__actions">
+                <?= $u['id'] === $user['id'] ? '' : btn_reset_pin($u) ?>
                 <?= btn_edit('users', $u) ?>
                 <?= $u['id'] === $user['id'] ? '' : btn_delete('users', $u['id'], $u['name']) ?>
             </div>

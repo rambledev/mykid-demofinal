@@ -49,10 +49,10 @@ function auth_login(string $role, string $phone, string $pin): bool
     return false;
 }
 
-/** Save a freshly hashed PIN for a user (direct UPDATE — no whole-state write needed). */
+/** Save a freshly hashed PIN for a user (direct UPDATE — no whole-state write needed); clears must_change_pin. */
 function auth_store_pin_hash(int $userId, string $pin): void
 {
-    mk_db()->prepare('UPDATE users SET pin = ? WHERE id = ?')->execute([pin_hash($pin), $userId]);
+    mk_db()->prepare('UPDATE users SET pin = ?, must_change_pin = 0 WHERE id = ?')->execute([pin_hash($pin), $userId]);
     store_rows_cache(clear: true);
     mk_log('Auth', 'pin rehashed', ['user' => $userId]);
 }
@@ -89,6 +89,7 @@ function current_user(): ?array
 
     // Scope is always re-derived from the account record.
     $user = [
+        'must_change_pin' => !empty($account['must_change_pin']), // still on the default PIN → set-pin page first
         'id'           => $account['id'],
         'name'         => $account['name'],
         'role'         => $account['role'],

@@ -29,6 +29,7 @@ return [
     ],
     'sections' => [
         'admin' => ['role' => 'admin', 'pages' => [
+            'set-pin'    => 'common/set-pin',
             'account'    => 'common/account',
             'activities' => 'admin/activities',
             'attendance' => 'admin/attendance',
@@ -45,8 +46,10 @@ return [
             'students'   => 'admin/students',
             'teachers'   => 'admin/teachers',
             'users'      => 'admin/users',
+            'system'     => 'admin/system',
         ]],
         'executive' => ['role' => 'executive', 'pages' => [
+            'set-pin'    => 'common/set-pin',
             'account'   => 'common/account',
             'cctv'      => 'common/cctv',
             'dashboard' => 'executive/dashboard',
@@ -55,6 +58,7 @@ return [
             'stars'     => 'common/stars',
         ]],
         'teacher' => ['role' => 'teacher', 'pages' => [
+            'set-pin'    => 'common/set-pin',
             'account'       => 'common/account',
             'activities'    => 'teacher/activities',
             'attendance'    => 'teacher/attendance',
@@ -74,6 +78,7 @@ return [
             'works'         => 'teacher/works',
         ]],
         'parent' => ['role' => 'parent', 'pages' => [
+            'set-pin'    => 'common/set-pin',
             'account'       => 'common/account',
             'attendance'    => 'parent/attendance',
             'calendar'      => 'parent/calendar',

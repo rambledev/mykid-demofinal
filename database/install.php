@@ -4,15 +4,14 @@
  * No demo data: everything else (rooms, teachers, students, accounts) is entered by the admin.
  *
  *   php database/install.php                       create missing tables, show the current state
- *   php database/install.php --school="ศูนย์พัฒนาเด็กเล็กบ้านโพนสูง" --short="ศพด.บ้านโพนสูง" \
- *       --province="อุดรธานี" --admin-name="ชื่อผู้ดูแล" --admin-phone=0812345678 --admin-pin=246810
- *                                                  first setup (only when no school exists yet)
- *   php database/install.php --reset ...           DROP every table first (all data is lost!) then set up
- *   php database/install.php --admin-phone=08xxxxxxxx --admin-pin=xxxxxx [--admin-name="..."]
- *                                                  school exists: add an admin account, or reset the PIN of an
- *                                                  existing admin (forgotten PIN) — no other data is touched
- *   --allow-weak-pin                               accept an easy PIN (e.g. 000000) on purpose — change it after
- *                                                  the first login (หน้า บัญชี → เปลี่ยนรหัส PIN)
+ *   php database/install.php --school="โรงเรียนโพนสูง" [--short=... --province=...]
+ *                                                  first setup (no school yet): school + default admin
+ *                                                  0820000000 / PIN 123456 (set own PIN at the first login)
+ *   php database/install.php --reset --school=...  DROP every table first (all data is lost!) then set up
+ *   --admin-phone=08xxxxxxxx [--admin-pin=xxxxxx] [--admin-name="..."]
+ *                                                  another admin phone / a fixed PIN (no first-login change);
+ *                                                  without --school: add that admin, or reset its PIN to 123456
+ *   --allow-weak-pin                               accept an easy fixed --admin-pin on purpose
  *
  * Connection settings: env vars or .env (DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASS).
  */
@@ -26,6 +25,8 @@ if (PHP_SAPI !== 'cli') {
 $root = dirname(__DIR__);
 require $root . '/app/bootstrap.php';
 
+const DEFAULT_ADMIN_PHONE = '0820000000'; // default admin (PIN DEFAULT_PIN = 123456, set at first login)
+
 $opt = getopt('', ['reset', 'allow-weak-pin', 'school:', 'short:', 'province:', 'admin-name:', 'admin-phone:', 'admin-pin:']);
 $fail = function (string $message): never {
     fwrite(STDERR, "❌ $message\n");
@@ -34,11 +35,12 @@ $fail = function (string $message): never {
 
 // 1. Validate EVERY argument before touching the database (a typo must never cost data).
 $setup = null;
-$adminOnly = !isset($opt['school']) && !isset($opt['reset']) && isset($opt['admin-phone']);
+$adminOnly = !isset($opt['school']) && !isset($opt['reset']) && (isset($opt['admin-phone']) || isset($opt['admin-pin']));
 if (isset($opt['school']) || isset($opt['reset']) || $adminOnly) {
     $name = $adminOnly ? '-' : trim((string) ($opt['school'] ?? ''));
-    $phone = normalize_phone((string) ($opt['admin-phone'] ?? ''));
-    $pin = (string) ($opt['admin-pin'] ?? '');
+    $phone = normalize_phone((string) ($opt['admin-phone'] ?? DEFAULT_ADMIN_PHONE));
+    $pin = (string) ($opt['admin-pin'] ?? DEFAULT_PIN);
+    $mustChange = !isset($opt['admin-pin']); // default PIN → the admin sets their own at the first login
     if ($name === '') {
         $fail('กรุณาระบุชื่อโรงเรียน --school="..."' . (isset($opt['reset']) ? ' (--reset ต้องตั้งค่าโรงเรียนและ Admin ใหม่ในคำสั่งเดียวกัน)' : ''));
     }
@@ -48,12 +50,12 @@ if (isset($opt['school']) || isset($opt['reset']) || $adminOnly) {
     if (!preg_match('/^\d{6}$/', $pin)) {
         $fail('กรุณาระบุ PIN ตัวเลข 6 หลัก --admin-pin=xxxxxx');
     }
-    $weak = pin_is_weak($pin);
+    $weak = pin_is_weak($pin) && !$mustChange;
     if ($weak && !isset($opt['allow-weak-pin'])) {
         $fail('PIN นี้เดาง่าย (เช่น 123456 / เลขซ้ำกันทั้งหมด) — ใช้ PIN อื่น หรือเพิ่ม --allow-weak-pin ถ้าตั้งใจ แล้วเปลี่ยนหลังเข้าระบบครั้งแรก');
     }
     $setup = ['name' => $name, 'short' => trim((string) ($opt['short'] ?? $name)), 'province' => trim((string) ($opt['province'] ?? '')),
-        'phone' => $phone, 'pin' => $pin, 'adminName' => trim((string) ($opt['admin-name'] ?? 'ผู้ดูแลโรงเรียน')), 'weak' => $weak];
+        'phone' => $phone, 'pin' => $pin, 'adminName' => trim((string) ($opt['admin-name'] ?? 'ผู้ดูแลระบบ')), 'weak' => $weak, 'mustChange' => $mustChange];
 }
 
 echo "[Install] START " . mk_env('DB_USER') . '@' . mk_env('DB_HOST') . ':' . mk_env('DB_PORT') . '/' . mk_env('DB_NAME') . "\n";
@@ -74,6 +76,7 @@ if ($adminOnly) {
             foreach ($state['tables']['users'] as &$u) {
                 if ($u['id'] === $existing['id']) {
                     $u['pin'] = pin_hash($setup['pin']);
+                    $u['must_change_pin'] = $setup['mustChange'];
                     $u['name'] = isset($GLOBALS['opt']['admin-name']) ? $setup['adminName'] : $u['name'];
                 }
             }
@@ -81,7 +84,8 @@ if ($adminOnly) {
             return;
         }
         $state['tables']['users'][] = ['id' => $state['nextId']++, 'name' => $setup['adminName'], 'phone' => $setup['phone'],
-            'pin' => pin_hash($setup['pin']), 'role' => 'admin', 'school_id' => $school['id'], 'classroom_id' => null, 'student_id' => null, 'teacher_id' => null];
+            'pin' => pin_hash($setup['pin']), 'must_change_pin' => $setup['mustChange'], 'role' => 'admin', 'school_id' => $school['id'],
+            'classroom_id' => null, 'student_id' => null, 'teacher_id' => null];
     });
     mk_db()->prepare('DELETE FROM login_attempts WHERE phone = ?')->execute([$setup['phone']]); // unlock after a reset
     echo '[Install] ✅ ' . ($existing ? 'reset PIN of admin ' : 'created admin ') . $setup['phone'] . "\n";
@@ -116,9 +120,10 @@ if ($setup) {
         $state['tables']['settings'][] = ['id' => $state['nextId']++, 'school_id' => $schoolId, 'phone' => '', 'address' => '',
             'openTime' => '07:30', 'closeTime' => '16:30', 'motto' => ''];
         $state['tables']['users'][] = ['id' => $state['nextId']++, 'name' => $setup['adminName'], 'phone' => $setup['phone'],
-            'pin' => pin_hash($setup['pin']), 'role' => 'admin', 'school_id' => $schoolId, 'classroom_id' => null, 'student_id' => null, 'teacher_id' => null];
+            'pin' => pin_hash($setup['pin']), 'must_change_pin' => $setup['mustChange'], 'role' => 'admin', 'school_id' => $schoolId,
+            'classroom_id' => null, 'student_id' => null, 'teacher_id' => null];
     });
-    echo "[Install] ✅ created school \"{$setup['name']}\" + admin {$setup['phone']}\n";
+    echo "[Install] ✅ created school \"{$setup['name']}\" + admin {$setup['phone']}" . ($setup['mustChange'] ? ' (PIN ' . DEFAULT_PIN . ' — set own PIN at first login)' : '') . "\n";
 }
 
 $schools = store_rows('schools');

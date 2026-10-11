@@ -90,6 +90,10 @@ function mk_dispatch(): void
                 error_page(503, 'ระบบยังไม่พร้อมใช้งาน', 'ผู้ดูแลระบบกำลังตั้งค่าข้อมูลโรงเรียน กรุณาลองใหม่อีกครั้งภายหลัง');
             }
             mk_session_start();
+            $user = current_user();
+            if ($user && $user['must_change_pin'] && !in_array($page, ['common/set-pin', 'logout', 'api', 'healthz', 'readyz'], true)) {
+                redirect($user['meta']['dir'] . '/set-pin'); // first login / PIN reset: own PIN before anything else
+            }
         }
         mk_render($page, $options['role'] ?? null);
         mk_log('Router', 'dispatch END', ['page' => $page]);

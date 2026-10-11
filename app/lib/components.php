@@ -202,6 +202,13 @@ function btn_edit(string $table, array $row): string
     return '<button type="button" class="icon-btn" data-action="open-form" data-table="' . e($table) . '" data-record="' . json_attr(public_row($table, $row)) . '" aria-label="แก้ไข">' . icon('edit') . '</button>';
 }
 
+/** Admin: reset an account's PIN to the default (forgotten PIN). */
+function btn_reset_pin(array $account): string
+{
+    return '<button type="button" class="icon-btn" data-action="reset-pin" data-user="' . e(tok('users', $account['id'])) . '" data-label="' . e($account['name']) . '"'
+        . ' aria-label="รีเซ็ต PIN ของ ' . e($account['name']) . '" title="รีเซ็ต PIN เป็น ' . DEFAULT_PIN . '">🔑</button>';
+}
+
 function btn_delete(string $table, int $id, string $label): string
 {
     return '<button type="button" class="icon-btn icon-btn--danger" data-action="delete" data-table="' . e($table) . '" data-id="' . e(tok($table, $id)) . '" data-label="' . e($label) . '" aria-label="ลบ ' . e($label) . '">' . icon('trash') . '</button>';

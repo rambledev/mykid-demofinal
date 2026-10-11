@@ -18,7 +18,8 @@ filter_bar('students', array_column(array_map(fn ($r) => ['k' => tok('classrooms
                 <span class="chip"><?= $room['emoji'] ?? '' ?> <?= e($room['name'] ?? '-') ?></span>
                 <small>👤 <?= e($s['parentName']) ?><?= ($s['parentPhone'] ?? '') !== '' ? ' · 🔑 ' . e($s['parentPhone']) : ' · ⚠️ ยังไม่มีบัญชีผู้ปกครอง' ?></small>
             </div>
-            <div class="person__actions"><?= btn_edit('students', $s) ?><?= btn_delete('students', $s['id'], $s['nickname']) ?></div>
+            <?php $parentAccount = ($s['parentPhone'] ?? '') !== '' ? account_by_phone($s['parentPhone']) : null; ?>
+            <div class="person__actions"><?= $parentAccount ? btn_reset_pin($parentAccount) : '' ?><?= btn_edit('students', $s) ?><?= btn_delete('students', $s['id'], $s['nickname']) ?></div>
         </article>
     <?php endforeach; ?>
 </div>

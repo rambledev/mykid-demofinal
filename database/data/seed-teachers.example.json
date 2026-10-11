@@ -1,0 +1,6 @@
+[
+  {
+    "teacher": { "firstname": "สมใจ", "lastname": "ตัวอย่าง", "phone": "0800000001", "role": "TEACHER" },
+    "classroom": { "name": "ห้องตัวอย่าง 1", "level": "เตรียมอนุบาล", "age_range": "2-3 ปี" }
+  }
+]

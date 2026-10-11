@@ -424,6 +424,9 @@ ALTER TABLE stars ADD COLUMN IF NOT EXISTS recipient VARCHAR(10) NOT NULL DEFAUL
 ALTER TABLE stars ADD COLUMN IF NOT EXISTS parent_id INT UNSIGNED NULL AFTER recipient;
 ALTER TABLE stars ADD INDEX IF NOT EXISTS idx_recipient_date (recipient, date);
 
+-- Accounts created by the admin start with the default PIN and must set their own PIN at the first login.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_pin TINYINT(1) NOT NULL DEFAULT 0 AFTER pin;
+
 -- School code + classroom level / age range (database/import-school.php, admin classroom form).
 ALTER TABLE schools ADD COLUMN IF NOT EXISTS code VARCHAR(20) NULL AFTER shortName;
 ALTER TABLE classrooms ADD COLUMN IF NOT EXISTS level VARCHAR(40) NULL AFTER name;

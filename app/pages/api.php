@@ -21,7 +21,13 @@ if (isset($_POST['action'])) {
     $input = json_decode((string) file_get_contents('php://input'), true) ?: [];
 }
 $action = (string) ($input['action'] ?? '');
-mk_log('Api', 'request START', ['action' => $action, 'input' => $input]);
+$logInput = $input;
+array_walk_recursive($logInput, function (&$v, $k) { // PINs never reach the log
+    if (in_array($k, ['pin', 'current', 'new', 'confirm', 'parentPin'], true)) {
+        $v = '***';
+    }
+});
+mk_log('Api', 'request START', ['action' => $action, 'input' => $logInput]);
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     json_response(['ok' => false, 'message' => 'ไม่สามารถดำเนินการได้'], 405);
@@ -32,6 +38,9 @@ if (!$user) {
 }
 if (!verify_csrf($_SERVER['HTTP_X_CSRF_TOKEN'] ?? null)) {
     json_response(['ok' => false, 'message' => 'กรุณารีเฟรชหน้าแล้วลองใหม่อีกครั้ง'], 419);
+}
+if ($user['must_change_pin'] && !in_array($action, ['change_pin', 'version'], true)) {
+    json_response(['ok' => false, 'message' => 'กรุณาตั้งรหัส PIN ของคุณก่อนใช้งาน', 'redirect' => url($user['meta']['dir'] . '/set-pin')], 403);
 }
 
 /** Decode the id token in $input[$key] for $table (0 = not set / new row). */
@@ -172,10 +181,7 @@ try {
             authorize(can_write_table($user, $table), 'บัญชีนี้ไม่มีสิทธิ์แก้ไขข้อมูลนี้', ['user' => $user['id'], 'role' => $user['role'], 'table' => $table]);
             authorize($table !== 'pickups', 'กรุณาใช้เมนูรับ-ส่ง', ['table' => $table]); // status flow: pickup_* actions only
             $id = in_id($input, 'id', $table);
-            $pinKey = ['users' => 'pin', 'teachers' => 'pin', 'students' => 'parentPin'][$table] ?? null;
-            if ($pinKey && trim((string) ($input['data'][$pinKey] ?? '')) === '') {
-                unset($input['data'][$pinKey]); // no new PIN = keep the current one (PINs are never sent to the browser)
-            }
+            unset($input['data']['pin'], $input['data']['must_change_pin']); // PINs are never set through forms (DEFAULT_PIN + first-login setup)
             $data = validate_fields($table, (array) ($input['data'] ?? []), $id === 0);
             if ($id === 0) {
                 // New rows always carry every schema column (optional ones empty), so views never miss a key.
@@ -192,11 +198,10 @@ try {
                 array_map('validate_image_upload', $pending); // reject bad files BEFORE saving the work
             }
             // Login accounts that follow teacher / student records (app/lib/accounts.php) — checked BEFORE saving.
-            $accountPin = null;
-            if (in_array($table, ['teachers', 'students'], true)) {
-                $accountPin = ($data[$pinKey] ?? '') !== '' ? (string) $data[$pinKey] : null;
-                unset($data[$pinKey]); // the PIN lives only (hashed) on the account
-                $table === 'teachers' ? account_check_teacher($id, $data, $accountPin) : account_check_parent($id, $data, $accountPin);
+            if ($table === 'teachers') {
+                account_check_teacher($id, $data);
+            } elseif ($table === 'students') {
+                account_check_parent($id, $data);
             }
             $cameraFlags = null;
             if ($table === 'cameras') {
@@ -218,8 +223,8 @@ try {
                 }
             }
             if ($table === 'users') {
-                if (isset($data['pin'])) {
-                    $data['pin'] = pin_hash($data['pin']); // credentials are stored hashed only
+                if (!$id) {
+                    $data += account_default_pin(); // new admin / executive: PIN 123456, set their own at first login
                 }
                 if ($id) {
                     $target = find_row('users', $id);
@@ -265,12 +270,12 @@ try {
             }
             if ($table === 'teachers') {
                 $hadAccount = teacher_account($savedId) !== null;
-                account_sync_teacher($savedId, $accountPin);
-                $message .= $hadAccount ? ($accountPin !== null ? ' · ตั้ง PIN ใหม่ให้ครูแล้ว' : '') : ' · สร้างบัญชีเข้าสู่ระบบของครูแล้ว';
+                account_sync_teacher($savedId);
+                $message .= $hadAccount ? '' : ' · สร้างบัญชีครูแล้ว (PIN เริ่มต้น ' . DEFAULT_PIN . ')';
             } elseif ($table === 'students') {
-                account_sync_parent($savedId, $accountPin);
-                $parentPhone = (string) (find_row('students', $savedId)['parentPhone'] ?? '');
-                $message .= $parentPhone !== '' ? ' · บัญชีผู้ปกครอง ' . $parentPhone . ' พร้อมใช้งาน' : '';
+                $hadParent = ($parentPhone = (string) (find_row('students', $savedId)['parentPhone'] ?? '')) !== '' && account_by_phone($parentPhone);
+                account_sync_parent($savedId);
+                $message .= $parentPhone !== '' && !$hadParent ? ' · สร้างบัญชีผู้ปกครองแล้ว (PIN เริ่มต้น ' . DEFAULT_PIN . ')' : '';
             }
             if ($table === 'portfolio' && ($files = uploaded_files())) {
                 // Portfolio images: the work was just saved inside the user's scope (apply_write_scope).
@@ -455,15 +460,49 @@ try {
             $message = 'บันทึกการรับประทานอาหารแล้ว';
             break;
 
+        case 'reset_pin':
+            // Admin: forgotten PIN → back to DEFAULT_PIN; the user sets a new one at the next login.
+            authorize($user['role'] === 'admin', 'เฉพาะผู้ดูแลโรงเรียนเท่านั้น', ['role' => $user['role']]);
+            $target = account_reset_pin($user, in_id($input, 'user', 'users'));
+            $message = 'รีเซ็ต PIN ของ ' . $target['name'] . ' เป็น ' . DEFAULT_PIN . ' แล้ว — ให้เข้าสู่ระบบแล้วตั้ง PIN ใหม่';
+            break;
+
+        case 'import_seed':
+            // Admin: seed data from uploaded JSON files (app/lib/importer.php) — preview first, then confirm.
+            authorize($user['role'] === 'admin', 'เฉพาะผู้ดูแลโรงเรียนเท่านั้น', ['role' => $user['role']]);
+            $write = ($input['mode'] ?? '') === 'confirm';
+            $report = seed_import(seed_from_uploads(uploaded_files()), $write);
+            json_response(['ok' => true, 'message' => $write ? 'นำเข้า Seed Data เรียบร้อยแล้ว' : 'ตรวจสอบไฟล์แล้ว ยังไม่ได้บันทึก',
+                'report' => seed_report($report), 'written' => $write, 'version' => store_state()['version']]);
+
+        case 'system_reset':
+            // Admin: wipe all data except the school, its settings and admin accounts. Typed phrase + own PIN.
+            authorize($user['role'] === 'admin', 'เฉพาะผู้ดูแลโรงเรียนเท่านั้น', ['role' => $user['role']]);
+            if (trim((string) ($input['phrase'] ?? '')) !== 'ล้างข้อมูล') {
+                throw new ValidationException('กรุณาพิมพ์คำว่า “ล้างข้อมูล” เพื่อยืนยัน');
+            }
+            $me = find_row('users', $user['id']);
+            if (($wait = login_lock_seconds($me['phone'])) > 0) {
+                throw new ValidationException('ใส่รหัสไม่ถูกต้องหลายครั้ง กรุณารอประมาณ ' . max(1, (int) ceil($wait / 60)) . ' นาทีแล้วลองใหม่อีกครั้ง');
+            }
+            if (!pin_verify((string) ($input['pin'] ?? ''), (string) $me['pin'])) {
+                login_record_attempt($me['phone'], false);
+                throw new ValidationException('รหัส PIN ไม่ถูกต้อง');
+            }
+            $removed = system_reset($user);
+            json_response(['ok' => true, 'message' => 'ล้างข้อมูลระบบเรียบร้อยแล้ว (' . number_format($removed) . ' รายการ) — เหลือข้อมูลโรงเรียนและบัญชีผู้ดูแล',
+                'redirect' => url('admin'), 'version' => store_state()['version']]);
+
         case 'change_pin':
             // Every role: set a new PIN for the OWN account (current PIN required, throttled like the login).
             $account = find_row('users', $user['id']);
             $current = (string) ($input['current'] ?? '');
             $new = (string) ($input['new'] ?? '');
-            if (($wait = login_lock_seconds($account['phone'])) > 0) {
+            $firstSetup = $user['must_change_pin']; // just signed in with the default PIN — no need to type it again
+            if (!$firstSetup && ($wait = login_lock_seconds($account['phone'])) > 0) {
                 throw new ValidationException('ใส่รหัสไม่ถูกต้องหลายครั้ง กรุณารอประมาณ ' . max(1, (int) ceil($wait / 60)) . ' นาทีแล้วลองใหม่อีกครั้ง');
             }
-            if (!pin_verify($current, (string) $account['pin'])) {
+            if (!$firstSetup && !pin_verify($current, (string) $account['pin'])) {
                 login_record_attempt($account['phone'], false);
                 throw new ValidationException('รหัส PIN ปัจจุบันไม่ถูกต้อง');
             }
@@ -473,7 +512,7 @@ try {
             if ($new !== (string) ($input['confirm'] ?? '')) {
                 throw new ValidationException('รหัส PIN ใหม่ทั้งสองช่องไม่ตรงกัน');
             }
-            if ($new === $current) {
+            if ($new === $current || pin_verify($new, (string) $account['pin'])) {
                 throw new ValidationException('กรุณาตั้งรหัส PIN ใหม่ที่ไม่ซ้ำกับรหัสเดิม');
             }
             if (pin_is_weak($new)) {
@@ -482,7 +521,8 @@ try {
             auth_store_pin_hash($user['id'], $new);
             session_renew(); // new session id after a credential change
             mk_log('Auth', 'pin changed by owner', ['user' => $user['id']]);
-            json_response(['ok' => true, 'message' => 'เปลี่ยนรหัส PIN เรียบร้อยแล้ว ครั้งหน้าให้ใช้รหัสใหม่เข้าสู่ระบบ', 'csrf' => csrf_token()]);
+            json_response(['ok' => true, 'message' => $firstSetup ? 'ตั้งรหัส PIN เรียบร้อยแล้ว ยินดีต้อนรับค่ะ 🎉' : 'เปลี่ยนรหัส PIN เรียบร้อยแล้ว ครั้งหน้าให้ใช้รหัสใหม่เข้าสู่ระบบ',
+                'csrf' => csrf_token(), 'redirect' => $firstSetup ? url(home_path($user['role'])) : null]);
 
         case 'send_message':
             // Chat (app/lib/chat.php): message + notification for the other side in one write.

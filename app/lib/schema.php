@@ -39,8 +39,7 @@ function mk_tables(): array
             'name'      => ['label' => 'ชื่อที่แสดง', 'type' => 'text', 'required' => true, 'max' => 60],
             'role'      => ['label' => 'บทบาท', 'type' => 'select', 'required' => true, 'options' => ['admin' => '🛡️ Admin โรงเรียน', 'executive' => '💼 ผู้บริหาร']],
             'school_id' => ['label' => 'โรงเรียน', 'type' => 'school'], // forced from the session (apply_write_scope)
-            'phone'     => ['label' => 'เบอร์โทรศัพท์', 'type' => 'phone', 'required' => true],
-            'pin'       => ['label' => 'PIN 6 หลัก', 'type' => 'pin', 'required' => true],
+            'phone'     => ['label' => 'เบอร์โทรศัพท์ (ใช้เข้าสู่ระบบ · PIN เริ่มต้น 123456)', 'type' => 'phone', 'required' => true],
         ]],
         'classrooms' => ['label' => 'ห้องเรียน', 'level' => 'classroom_self', 'fields' => [
             'name'     => ['label' => 'ชื่อห้อง', 'type' => 'text', 'required' => true, 'max' => 40],
@@ -54,9 +53,7 @@ function mk_tables(): array
             'nickname'     => ['label' => 'ชื่อที่ใช้เรียก', 'type' => 'text', 'required' => true, 'max' => 40, 'placeholder' => 'เช่น ครูมะลิ'],
             'fullName'     => ['label' => 'ชื่อ-นามสกุล', 'type' => 'text', 'required' => true, 'max' => 80],
             'classroom_id' => ['label' => 'ห้องที่รับผิดชอบ', 'type' => 'classroom', 'required' => true],
-            'phone'        => ['label' => 'เบอร์โทรศัพท์ (ใช้เข้าสู่ระบบ)', 'type' => 'phone', 'required' => true],
-            // Login account (app/lib/accounts.php): initial PIN, write-only — never stored on the teacher record.
-            'pin'          => ['label' => 'PIN เข้าสู่ระบบของครู', 'type' => 'pin'],
+            'phone'        => ['label' => 'เบอร์โทรศัพท์ (ใช้เข้าสู่ระบบ · PIN เริ่มต้น 123456)', 'type' => 'phone', 'required' => true],
         ]],
         'students' => ['label' => 'นักเรียน', 'level' => 'student_self', 'fields' => [
             'nickname'     => ['label' => 'ชื่อเล่น', 'type' => 'text', 'required' => true, 'max' => 40, 'placeholder' => 'เช่น น้องต้น'],
@@ -64,9 +61,9 @@ function mk_tables(): array
             'gender'       => ['label' => 'เพศ', 'type' => 'select', 'options' => 'genders'],
             'classroom_id' => ['label' => 'ห้องเรียน', 'type' => 'classroom', 'required' => true],
             'parentName'   => ['label' => 'ผู้ปกครอง', 'type' => 'text', 'required' => true, 'max' => 80],
-            // Parent login account (app/lib/accounts.php): one phone = one account, linked to every child with it.
-            'parentPhone'  => ['label' => 'เบอร์โทรผู้ปกครอง (ใช้เข้าสู่ระบบ)', 'type' => 'phone'],
-            'parentPin'    => ['label' => 'PIN เข้าสู่ระบบของผู้ปกครอง', 'type' => 'pin'],
+            // Parent login account (app/lib/accounts.php): one phone = one account, linked to every child with it;
+            // a new account starts with PIN 123456 and sets its own PIN at the first login.
+            'parentPhone'  => ['label' => 'เบอร์โทรผู้ปกครอง (ใช้เข้าสู่ระบบ · PIN เริ่มต้น 123456)', 'type' => 'phone'],
         ]],
         'activities' => ['label' => 'กิจกรรม', 'level' => 'classroom', 'fields' => [
             'classroom_id' => ['label' => 'ห้องเรียน', 'type' => 'classroom', 'required' => true],

@@ -19,4 +19,4 @@ storage/uploads/
 
 # Real school data for database/import-school.php (children's names — PDPA): never in git / images
 database/data/*.json
-!database/data/school.example.json
+!database/data/*.example.json
