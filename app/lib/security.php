@@ -147,6 +147,15 @@ function pin_hash(string $pin): string
     return password_hash($pin, pin_algo());
 }
 
+/** Easy-to-guess PINs: all the same digit, or a straight run (123456, 654321, ...). */
+function pin_is_weak(string $pin): bool
+{
+    if (preg_match('/^(\d)\1{5}$/', $pin)) {
+        return true;
+    }
+    return str_contains('0123456789', $pin) || str_contains('9876543210', $pin);
+}
+
 /** Constant-time check; also accepts a legacy plain PIN (rehashed by the caller). */
 function pin_verify(string $pin, string $stored): bool
 {

@@ -28,6 +28,10 @@ php -d upload_max_filesize=12M -d post_max_size=64M -d memory_limit=256M -S 127.
 - `php database/install.php --reset --school=... ...` drops every table (all data is lost) and sets up again. Every
   argument is validated first — a wrong value stops before anything is dropped. An easy PIN (000000, 123456, …) needs
   `--allow-weak-pin`; change it after the first login (/admin/users → edit your own account).
+- `php database/install.php --admin-phone=08xxxxxxxx --admin-pin=xxxxxx` adds an admin to the existing school, or resets
+  the PIN of an existing admin (forgotten PIN) — nothing else is touched.
+- Every user can change their own PIN on the account page (current PIN + new PIN twice; easy PINs such as 000000 /
+  123456 are refused; wrong current PINs count toward the login lock).
 - `php database/check.php` tests the connection; missing tables / new columns are applied automatically (`schema.sql`).
 
 ### Every school day

@@ -8,8 +8,11 @@
  *       --province="อุดรธานี" --admin-name="ชื่อผู้ดูแล" --admin-phone=0812345678 --admin-pin=246810
  *                                                  first setup (only when no school exists yet)
  *   php database/install.php --reset ...           DROP every table first (all data is lost!) then set up
+ *   php database/install.php --admin-phone=08xxxxxxxx --admin-pin=xxxxxx [--admin-name="..."]
+ *                                                  school exists: add an admin account, or reset the PIN of an
+ *                                                  existing admin (forgotten PIN) — no other data is touched
  *   --allow-weak-pin                               accept an easy PIN (e.g. 000000) on purpose — change it after
- *                                                  the first login (/admin/users → แก้ไขบัญชีของฉัน)
+ *                                                  the first login (หน้า บัญชี → เปลี่ยนรหัส PIN)
  *
  * Connection settings: env vars or .env (DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASS).
  */
@@ -31,8 +34,9 @@ $fail = function (string $message): never {
 
 // 1. Validate EVERY argument before touching the database (a typo must never cost data).
 $setup = null;
-if (isset($opt['school']) || isset($opt['reset'])) {
-    $name = trim((string) ($opt['school'] ?? ''));
+$adminOnly = !isset($opt['school']) && !isset($opt['reset']) && isset($opt['admin-phone']);
+if (isset($opt['school']) || isset($opt['reset']) || $adminOnly) {
+    $name = $adminOnly ? '-' : trim((string) ($opt['school'] ?? ''));
     $phone = normalize_phone((string) ($opt['admin-phone'] ?? ''));
     $pin = (string) ($opt['admin-pin'] ?? '');
     if ($name === '') {
@@ -44,7 +48,7 @@ if (isset($opt['school']) || isset($opt['reset'])) {
     if (!preg_match('/^\d{6}$/', $pin)) {
         $fail('กรุณาระบุ PIN ตัวเลข 6 หลัก --admin-pin=xxxxxx');
     }
-    $weak = preg_match('/^(\d)\1{5}$/', $pin) || in_array($pin, ['123456', '654321', '012345'], true);
+    $weak = pin_is_weak($pin);
     if ($weak && !isset($opt['allow-weak-pin'])) {
         $fail('PIN นี้เดาง่าย (เช่น 123456 / เลขซ้ำกันทั้งหมด) — ใช้ PIN อื่น หรือเพิ่ม --allow-weak-pin ถ้าตั้งใจ แล้วเปลี่ยนหลังเข้าระบบครั้งแรก');
     }
@@ -54,6 +58,35 @@ if (isset($opt['school']) || isset($opt['reset'])) {
 
 echo "[Install] START " . mk_env('DB_USER') . '@' . mk_env('DB_HOST') . ':' . mk_env('DB_PORT') . '/' . mk_env('DB_NAME') . "\n";
 $pdo = mk_db(); // creates missing tables / applies schema.sql changes
+
+// Admin only (school exists): create the admin, or reset an existing admin's PIN. Nothing else changes.
+if ($adminOnly) {
+    $school = store_rows('schools')[0] ?? $fail('ยังไม่มีข้อมูลโรงเรียน — ตั้งค่าครั้งแรกด้วย --school=... ก่อน');
+    $existing = array_values(array_filter(store_rows('users'), fn ($u) => $u['phone'] === $setup['phone']))[0] ?? null;
+    if ($existing && $existing['role'] !== 'admin') {
+        $fail('เบอร์ ' . $setup['phone'] . ' เป็นบัญชี ' . role_meta($existing['role'])['th'] . ' อยู่แล้ว — ใช้เบอร์อื่นสำหรับ Admin');
+    }
+    if ($setup['weak']) {
+        echo "⚠️  PIN เดาง่าย — ควรเปลี่ยนทันทีหลังเข้าระบบครั้งแรก (หน้า บัญชี → เปลี่ยนรหัส PIN)\n";
+    }
+    store_mutate(function (array &$state) use ($setup, $school, $existing) {
+        if ($existing) {
+            foreach ($state['tables']['users'] as &$u) {
+                if ($u['id'] === $existing['id']) {
+                    $u['pin'] = pin_hash($setup['pin']);
+                    $u['name'] = isset($GLOBALS['opt']['admin-name']) ? $setup['adminName'] : $u['name'];
+                }
+            }
+            unset($u);
+            return;
+        }
+        $state['tables']['users'][] = ['id' => $state['nextId']++, 'name' => $setup['adminName'], 'phone' => $setup['phone'],
+            'pin' => pin_hash($setup['pin']), 'role' => 'admin', 'school_id' => $school['id'], 'classroom_id' => null, 'student_id' => null, 'teacher_id' => null];
+    });
+    mk_db()->prepare('DELETE FROM login_attempts WHERE phone = ?')->execute([$setup['phone']]); // unlock after a reset
+    echo '[Install] ✅ ' . ($existing ? 'reset PIN of admin ' : 'created admin ') . $setup['phone'] . "\n";
+    $setup = null;
+}
 
 if ($setup && !isset($opt['reset']) && store_rows('schools')) {
     $fail('มีข้อมูลโรงเรียนอยู่แล้ว — ใช้ --reset ถ้าต้องการเริ่มใหม่ทั้งหมด (ข้อมูลเดิมจะหายทั้งหมด)');
@@ -74,7 +107,7 @@ if (isset($opt['reset'])) {
 // 3. The school + its settings + the first admin account.
 if ($setup) {
     if ($setup['weak']) {
-        echo "⚠️  PIN เดาง่าย — ควรเปลี่ยนทันทีหลังเข้าระบบครั้งแรก (/admin/users → แก้ไขบัญชีของฉัน)\n";
+        echo "⚠️  PIN เดาง่าย — ควรเปลี่ยนทันทีหลังเข้าระบบครั้งแรก (หน้า บัญชี → เปลี่ยนรหัส PIN)\n";
     }
     store_mutate(function (array &$state) use ($setup) {
         $schoolId = $state['nextId']++;

@@ -44,6 +44,20 @@ mk_header(['id' => $user['role'] . '-account', 'title' => 'บัญชี', 'na
     </ul>
 </section>
 
+<section class="card">
+    <?php section_head('🔑', 'เปลี่ยนรหัส PIN', '', 'รหัส 6 หลักสำหรับเข้าสู่ระบบด้วยเบอร์ ' . $user['phone']); ?>
+    <form class="form" data-pin-form novalidate>
+        <label class="field"><span class="field__label">รหัส PIN ปัจจุบัน</span>
+            <input class="input" type="password" name="current" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="current-password" required></label>
+        <label class="field"><span class="field__label">รหัส PIN ใหม่ <small>(ตัวเลข 6 หลัก ไม่ใช่ 000000 / 123456)</small></span>
+            <input class="input" type="password" name="new" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password" required></label>
+        <label class="field"><span class="field__label">ยืนยันรหัส PIN ใหม่</span>
+            <input class="input" type="password" name="confirm" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password" required></label>
+        <p class="form__error" data-form-error hidden></p>
+        <button type="submit" class="btn btn--primary btn--block"><?= icon('check') ?> บันทึกรหัส PIN ใหม่</button>
+    </form>
+</section>
+
 <form class="logout-form" method="post" action="<?= e(url('logout')) ?>"><?= csrf_field() ?><button type="submit" class="btn btn--danger-soft btn--lg btn--block"><?= icon('logout') ?> ออกจากระบบ</button></form>
 
 <?php mk_footer(); ?>

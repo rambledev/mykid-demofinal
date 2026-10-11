@@ -310,6 +310,30 @@
     $$('[data-chat-scroll]').forEach((box) => { box.scrollTop = box.scrollHeight; });
   }
 
+  /** Account page: change the own PIN (current + new + confirm). */
+  async function changePin(form) {
+    const values = Object.fromEntries(['current', 'new', 'confirm'].map((k) => [k, form.elements[k].value.trim()]));
+    const errorEl = $('[data-form-error]', form);
+    const fail = (msg, field) => { errorEl.textContent = msg; errorEl.hidden = false; if (field) form.elements[field].focus(); };
+    if (!/^\d{6}$/.test(values.current)) return fail('กรุณากรอกรหัส PIN ปัจจุบัน 6 หลัก', 'current');
+    if (!/^\d{6}$/.test(values.new)) return fail('รหัส PIN ใหม่ต้องเป็นตัวเลข 6 หลัก', 'new');
+    if (values.new !== values.confirm) return fail('รหัส PIN ใหม่ทั้งสองช่องไม่ตรงกัน', 'confirm');
+    errorEl.hidden = true;
+    const button = form.querySelector('[type="submit"]');
+    setBusy(button, true);
+    try {
+      const data = await api('change_pin', values);
+      if (data.csrf) CFG.csrf = data.csrf; // session id was renewed
+      form.reset();
+      toast(data.message);
+    } catch (error) {
+      fail(error instanceof UserError ? error.message : 'กรุณาลองใหม่อีกครั้ง');
+    } finally {
+      setBusy(button, false);
+    }
+    return null;
+  }
+
   function sendMessage(form) {
     return Chat.send(form);
   }
@@ -1166,6 +1190,7 @@
     if (form.matches('[data-form-table]')) { event.preventDefault(); submitForm(form); }
     else if (form.matches('[data-meal-form]')) { event.preventDefault(); saveMeal(form); }
     else if (form.matches('[data-chat-form]')) { event.preventDefault(); sendMessage(form); }
+    else if (form.matches('[data-pin-form]')) { event.preventDefault(); changePin(form); }
     else if (form.matches('[data-upload-form]')) { event.preventDefault(); submitUpload(form); }
     else if (form.matches('[data-student-status-form]')) { event.preventDefault(); StudentStatus.save(form); }
   });

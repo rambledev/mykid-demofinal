@@ -433,6 +433,35 @@ try {
             $message = 'บันทึกการรับประทานอาหารแล้ว';
             break;
 
+        case 'change_pin':
+            // Every role: set a new PIN for the OWN account (current PIN required, throttled like the login).
+            $account = find_row('users', $user['id']);
+            $current = (string) ($input['current'] ?? '');
+            $new = (string) ($input['new'] ?? '');
+            if (($wait = login_lock_seconds($account['phone'])) > 0) {
+                throw new ValidationException('ใส่รหัสไม่ถูกต้องหลายครั้ง กรุณารอประมาณ ' . max(1, (int) ceil($wait / 60)) . ' นาทีแล้วลองใหม่อีกครั้ง');
+            }
+            if (!pin_verify($current, (string) $account['pin'])) {
+                login_record_attempt($account['phone'], false);
+                throw new ValidationException('รหัส PIN ปัจจุบันไม่ถูกต้อง');
+            }
+            if (!preg_match('/^\d{6}$/', $new)) {
+                throw new ValidationException('รหัส PIN ใหม่ต้องเป็นตัวเลข 6 หลัก');
+            }
+            if ($new !== (string) ($input['confirm'] ?? '')) {
+                throw new ValidationException('รหัส PIN ใหม่ทั้งสองช่องไม่ตรงกัน');
+            }
+            if ($new === $current) {
+                throw new ValidationException('กรุณาตั้งรหัส PIN ใหม่ที่ไม่ซ้ำกับรหัสเดิม');
+            }
+            if (pin_is_weak($new)) {
+                throw new ValidationException('รหัส PIN นี้เดาง่ายเกินไป (เช่น 000000, 123456) กรุณาตั้งรหัสอื่น');
+            }
+            auth_store_pin_hash($user['id'], $new);
+            session_renew(); // new session id after a credential change
+            mk_log('Auth', 'pin changed by owner', ['user' => $user['id']]);
+            json_response(['ok' => true, 'message' => 'เปลี่ยนรหัส PIN เรียบร้อยแล้ว ครั้งหน้าให้ใช้รหัสใหม่เข้าสู่ระบบ', 'csrf' => csrf_token()]);
+
         case 'send_message':
             // Chat (app/lib/chat.php): message + notification for the other side in one write.
             authorize(has_feature('chat') && can_write_table($user, 'messages'), 'บัญชีนี้ไม่มีสิทธิ์ส่งข้อความ', ['role' => $user['role']]);
