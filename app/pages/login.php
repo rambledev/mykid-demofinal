@@ -17,11 +17,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $phone = normalize_phone((string) ($_POST['phone'] ?? ''));
     $pinInput = $_POST['pin'] ?? '';
     $pin = is_array($pinInput) ? implode('', array_map('strval', $pinInput)) : (string) $pinInput;
-    mk_log('Auth DEBUG LOGIN INPUT', [
-    'role' => $role,
-    'phone' => $phone,
-    'pin_length' => strlen($pin),
-]);
+   mk_log(
+    'Auth',
+    'DEBUG LOGIN INPUT',
+    [
+        'role' => $role,
+        'phone' => $phone,
+        'pin_length' => strlen($pin),
+    ]
+);
 
     $wait = strlen($phone) === 10 ? login_lock_seconds($phone) : 0;
     if (!verify_csrf($_POST['csrf'] ?? null)) {
