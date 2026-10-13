@@ -10,7 +10,7 @@ return [
     'session'     => 'MYKIDDFA', // mykid-demofinal: own cookie name — never share sessions with the original Final Demo
     'tier'        => 'full',
     'tierLabel'   => 'Full',
-    'multiSchool' => false, // one school (ศพด.บ้านโพนสูง)
+    'multiSchool' => false, // one school (ศพด.โพนสูง)
     'meals'       => ['breakfast', 'lunch', 'snack', 'milk', 'fruit'],
     'modules'     => [
         'students', 'teachers', 'classrooms', 'activities', 'food', 'status', 'reports', 'attendanceReport',

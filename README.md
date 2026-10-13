@@ -1,6 +1,6 @@
 # mykid-demofinal
 
-Mykid — a school ↔ parent communication system for one school: ศูนย์พัฒนาเด็กเล็กบ้านโพนสูง (ศพด.บ้านโพนสูง).
+Mykid — a school ↔ parent communication system for one school: ศพด.โพนสูง.
 Roles: **School Admin · Executive · Teacher · Parent** (no platform-level Super Admin — one school only).
 It started as a copy of **Mykid Final Demo v1.0** and is now the real system — all demo data removed (ADR-020 – ADR-023 in
 `docs/production/decision-log.md`).
@@ -18,7 +18,7 @@ It started as a copy of **Mykid Final Demo v1.0** and is now the real system —
 ```bash
 cd ~/Desktop/product/mykid-demofinal
 cp .env.example .env            # first time only — fill in DB_PASS and APP_KEY (openssl rand -base64 48)
-php database/install.php --school="โรงเรียนโพนสูง"   # first time only: school + default admin 0820000000 / 123456
+php database/install.php --school="ศพด.โพนสูง"   # first time only: school + default admin 0820000000 / 123456
 php -d upload_max_filesize=12M -d post_max_size=64M -d memory_limit=256M -S 127.0.0.1:8081 -t public public/index.php
 ```
 

@@ -4,7 +4,7 @@
  * No demo data: everything else (rooms, teachers, students, accounts) is entered by the admin.
  *
  *   php database/install.php                       create missing tables, show the current state
- *   php database/install.php --school="โรงเรียนโพนสูง" [--short=... --province=...]
+ *   php database/install.php --school="ศพด.โพนสูง" [--short=... --province=...]
  *                                                  first setup (no school yet): school + default admin
  *                                                  0820000000 / PIN 123456 (set own PIN at the first login)
  *   php database/install.php --reset --school=...  DROP every table first (all data is lost!) then set up
