@@ -175,6 +175,17 @@ function mk_tables(): array
         ]],
         'cameraPermissions' => ['label' => 'สิทธิ์ดูกล้อง', 'level' => 'school', 'fields' => []],
         'mediaFiles' => ['label' => 'รูปภาพ', 'level' => 'media', 'fields' => []], // written by core/media.php only
+        // School-editable lists (catalog.php): meal key is generated on insert (api.php) and never edited.
+        'mealTimes' => ['label' => 'มื้ออาหาร', 'level' => 'school', 'fields' => [
+            'label' => ['label' => 'ชื่อมื้อ', 'type' => 'text', 'required' => true, 'max' => 40, 'placeholder' => 'เช่น อาหารกลางวัน'],
+            'icon'  => ['label' => 'สัญลักษณ์', 'type' => 'emoji', 'options' => 'mealIcons'],
+            'time'  => ['label' => 'เวลา', 'type' => 'time', 'required' => true],
+        ]],
+        'starReasons' => ['label' => 'รายการทำความดี', 'level' => 'school', 'fields' => [
+            'recipient' => ['label' => 'สำหรับ', 'type' => 'select', 'required' => true, 'options' => 'starRecipients'],
+            'reason'    => ['label' => 'ความดีที่ทำ', 'type' => 'text', 'required' => true, 'max' => 60, 'placeholder' => 'เช่น ช่วยเก็บของ / สวมหมวกกันน็อก'],
+            'points'    => ['label' => 'จำนวนดาว', 'type' => 'number', 'required' => true, 'min' => 1, 'max' => 10],
+        ]],
         'settings' => ['label' => 'การตั้งค่าโรงเรียน', 'level' => 'school', 'fields' => [
             'phone'     => ['label' => 'เบอร์โทรโรงเรียน', 'type' => 'text', 'max' => 20],
             'address'   => ['label' => 'ที่อยู่', 'type' => 'textarea', 'max' => 200],

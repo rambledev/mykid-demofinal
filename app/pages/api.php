@@ -114,6 +114,8 @@ function insert_defaults(string $table, array $row, array $user): array
         'schools'    => $row + ['emoji' => '🏫', 'color' => '#FFF4CC', 'status' => 'active'],
         'users'      => $row + ['classroom_id' => null, 'student_id' => null, 'teacher_id' => null],
         'stars'      => $row + ['recipient' => 'student', 'date' => today(), 'by' => $user['teacher_id']],
+        // new meal: a stable random key (food_menus / food_intake refer to it) + the next pastel colour
+        'mealTimes'  => $row + ['meal' => 'm' . bin2hex(random_bytes(4)), 'color' => MEAL_COLORS[count(store_rows('mealTimes')) % count(MEAL_COLORS)]],
         'portfolio'  => ['date' => ($row['date'] ?? '') !== '' ? $row['date'] : today()] + $row + ['art' => random_int(0, 5)],
         'photos'     => $row + ['date' => today(), 'art' => random_int(0, 5), 'emoji' => '📷'],
         'notifications' => $row + ['at' => $now, 'student_id' => null],
@@ -181,6 +183,10 @@ try {
             authorize(can_write_table($user, $table), 'บัญชีนี้ไม่มีสิทธิ์แก้ไขข้อมูลนี้', ['user' => $user['id'], 'role' => $user['role'], 'table' => $table]);
             authorize($table !== 'pickups', 'กรุณาใช้เมนูรับ-ส่ง', ['table' => $table]); // status flow: pickup_* actions only
             $id = in_id($input, 'id', $table);
+            authorize($table !== 'schools' || $id !== 0, 'ไม่สามารถเพิ่มโรงเรียนได้', ['table' => $table]); // one school: edit only
+            if ($table === 'schools') {
+                unset($input['data']['status']); // package status is not the admin's to change
+            }
             unset($input['data']['pin'], $input['data']['must_change_pin']); // PINs are never set through forms (DEFAULT_PIN + first-login setup)
             $data = validate_fields($table, (array) ($input['data'] ?? []), $id === 0);
             if ($id === 0) {
@@ -318,6 +324,7 @@ try {
             $id = in_id($input, 'id', $table);
             authorize(can_write_table($user, $table), 'บัญชีนี้ไม่มีสิทธิ์ลบข้อมูลนี้', ['table' => $table, 'id' => $id]);
             authorize($table !== 'pickups', 'กรุณาใช้เมนูรับ-ส่ง', ['table' => $table]);
+            authorize($table !== 'schools', 'ไม่สามารถลบข้อมูลโรงเรียนได้', ['table' => $table, 'id' => $id]);
             $existing = find_row($table, $id);
             authorize($existing !== null && row_in_scope($user, $table, $existing), 'ไม่มีสิทธิ์ลบข้อมูลนอกขอบเขตของบัญชีนี้', ['table' => $table, 'id' => $id]);
             if ($table === 'classrooms' && where(store_rows('students'), 'classroom_id', $id)) {

@@ -56,6 +56,31 @@ CREATE TABLE IF NOT EXISTS settings (
     KEY idx_school (school_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- School-editable lists (admin → ตั้งค่าโรงเรียน; app/lib/catalog.php reads them).
+-- meal = stable key used by food_menus columns / extra and food_intake.levels.
+CREATE TABLE IF NOT EXISTS meal_times (
+    id        INT UNSIGNED NOT NULL PRIMARY KEY,
+    school_id INT UNSIGNED NOT NULL,
+    meal      VARCHAR(30)  NOT NULL,
+    label     VARCHAR(60)  NULL DEFAULT '',
+    icon      VARCHAR(16)  NULL DEFAULT '',
+    time      VARCHAR(5)   NULL DEFAULT '',
+    color     VARCHAR(16)  NULL DEFAULT '',
+    extra     JSON NULL,
+    KEY idx_school (school_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ธนาคารความดี preset reasons — recipient student (good deeds) or parent (safe driving).
+CREATE TABLE IF NOT EXISTS star_reasons (
+    id        INT UNSIGNED NOT NULL PRIMARY KEY,
+    school_id INT UNSIGNED NOT NULL,
+    recipient VARCHAR(10)  NOT NULL DEFAULT 'student',
+    reason    VARCHAR(120) NULL DEFAULT '',
+    points    SMALLINT     NOT NULL DEFAULT 1,
+    extra     JSON NULL,
+    KEY idx_school (school_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ---------------------------------------------------------------- People
 
 CREATE TABLE IF NOT EXISTS users (

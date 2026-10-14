@@ -2,6 +2,10 @@
 /**
  * Core catalog — fixed lookup lists (roles, classroom statuses, meals, levels, ...).
  * Configuration only: the school's real data (rooms, people, records) lives in the database.
+ *
+ * School-editable lists (admin → ตั้งค่าโรงเรียน): meals come from the mealTimes table and the
+ * ธนาคารความดี presets from starReasons. Until the school's lists are seeded (catalog_seed_school),
+ * the built-in defaults below are used, so a fresh install behaves exactly as before.
  */
 declare(strict_types=1);
 
@@ -12,13 +16,8 @@ function mk_catalog(): array
         return $catalog;
     }
 
-    $allMeals = [
-        ['meal' => 'breakfast', 'label' => 'อาหารเช้า',    'icon' => '🍚', 'time' => '07:30', 'color' => '#FFF4CC'],
-        ['meal' => 'lunch',     'label' => 'อาหารกลางวัน', 'icon' => '🍱', 'time' => '11:00', 'color' => '#FFE9D6'],
-        ['meal' => 'snack',     'label' => 'อาหารว่าง',    'icon' => '🍌', 'time' => '14:30', 'color' => '#FFF6C7'],
-        ['meal' => 'milk',      'label' => 'นม',          'icon' => '🥛', 'time' => '14:30', 'color' => '#E9F5FF'],
-        ['meal' => 'fruit',     'label' => 'ผลไม้',        'icon' => '🍎', 'time' => '14:30', 'color' => '#FFE4E4'],
-    ];
+    $allMeals = catalog_default_meals();
+    $starReasons = catalog_school_list('starReasons');
 
     $catalog = [
         'roles' => [
@@ -42,7 +41,9 @@ function mk_catalog(): array
         ],
         // Icons a teacher can pick when adding an activity.
         'activityIcons' => ['🚩', '📚', '🔢', '🔤', '🎨', '🎵', '🔬', '📖', '🧩', '🌱', '🍱', '😴', '⚽', '🧸', '⭐', '🎉'],
-        'meals'         => array_values(array_filter($allMeals, fn ($m) => in_array($m['meal'], pkg()['meals'], true))),
+        'meals'         => catalog_school_list('mealTimes') ?? array_values(array_filter($allMeals, fn ($m) => in_array($m['meal'], pkg()['meals'], true))),
+        // Icons the admin can pick for a meal (mealTimes form).
+        'mealIcons'     => ['🍚', '🍱', '🍜', '🥣', '🍌', '🍎', '🥛', '🧃', '🍪', '🥪', '🍉', '🥕'],
         'intake' => [
             ['code' => 'good',   'label' => 'กินได้ดี',       'emoji' => '😋', 'tone' => 'good'],
             ['code' => 'some',   'label' => 'กินได้บางส่วน',   'emoji' => '🙂', 'tone' => 'warning'],
@@ -73,23 +74,9 @@ function mk_catalog(): array
             ['code' => 'motor',    'label' => 'กล้ามเนื้อ',          'emoji' => '🤸'],
             ['code' => 'creative', 'label' => 'ความคิดสร้างสรรค์',  'emoji' => '💡'],
         ],
-        'starReasons' => [
-            ['reason' => 'ตั้งใจทำกิจกรรม', 'points' => 5],
-            ['reason' => 'ช่วยเก็บของ',     'points' => 3],
-            ['reason' => 'กล้าแสดงออก',    'points' => 4],
-            ['reason' => 'แบ่งปันเพื่อน',    'points' => 2],
-            ['reason' => 'ทานข้าวหมด',     'points' => 2],
-            ['reason' => 'นอนกลางวันเรียบร้อย', 'points' => 1],
-        ],
+        'starReasons'       => $starReasons !== null ? array_values(where($starReasons, 'recipient', 'student')) : catalog_default_star_reasons('student'),
         // ธนาคารความดีขับขี่ปลอดภัย — parents earn stars for safe driving at drop-off / pick-up.
-        'parentStarReasons' => [
-            ['reason' => 'สวมหมวกกันน็อกทั้งผู้ปกครองและเด็ก', 'points' => 5],
-            ['reason' => 'คาดเข็มขัดนิรภัย / ใช้คาร์ซีทให้เด็ก',  'points' => 5],
-            ['reason' => 'จอดรถในจุดรับ-ส่งที่กำหนด',          'points' => 3],
-            ['reason' => 'ขับขี่ช้าและระมัดระวังในเขตโรงเรียน',  'points' => 3],
-            ['reason' => 'ไม่ใช้โทรศัพท์ขณะขับขี่',             'points' => 3],
-            ['reason' => 'มารับ-ส่งตรงเวลา',                  'points' => 2],
-        ],
+        'parentStarReasons' => $starReasons !== null ? array_values(where($starReasons, 'recipient', 'parent')) : catalog_default_star_reasons('parent'),
         'starRecipients' => [
             ['code' => 'student', 'label' => 'นักเรียน',  'emoji' => '🧒'],
             ['code' => 'parent',  'label' => 'ผู้ปกครองของนักเรียน (ขับขี่ปลอดภัย)', 'emoji' => '👨‍👩‍👧'],
@@ -134,6 +121,91 @@ function mk_catalog(): array
         ],
     ];
     return $catalog;
+}
+
+/** Built-in meal schedule — used until the school's mealTimes are seeded. */
+function catalog_default_meals(): array
+{
+    return [
+        ['meal' => 'breakfast', 'label' => 'อาหารเช้า',    'icon' => '🍚', 'time' => '07:30', 'color' => '#FFF4CC'],
+        ['meal' => 'lunch',     'label' => 'อาหารกลางวัน', 'icon' => '🍱', 'time' => '11:00', 'color' => '#FFE9D6'],
+        ['meal' => 'snack',     'label' => 'อาหารว่าง',    'icon' => '🍌', 'time' => '14:30', 'color' => '#FFF6C7'],
+        ['meal' => 'milk',      'label' => 'นม',          'icon' => '🥛', 'time' => '14:30', 'color' => '#E9F5FF'],
+        ['meal' => 'fruit',     'label' => 'ผลไม้',        'icon' => '🍎', 'time' => '14:30', 'color' => '#FFE4E4'],
+    ];
+}
+
+/** Built-in ธนาคารความดี presets — used until the school's starReasons are seeded. */
+function catalog_default_star_reasons(?string $recipient = null): array
+{
+    $all = [
+        ['recipient' => 'student', 'reason' => 'ตั้งใจทำกิจกรรม', 'points' => 5],
+        ['recipient' => 'student', 'reason' => 'ช่วยเก็บของ',     'points' => 3],
+        ['recipient' => 'student', 'reason' => 'กล้าแสดงออก',    'points' => 4],
+        ['recipient' => 'student', 'reason' => 'แบ่งปันเพื่อน',    'points' => 2],
+        ['recipient' => 'student', 'reason' => 'ทานข้าวหมด',     'points' => 2],
+        ['recipient' => 'student', 'reason' => 'นอนกลางวันเรียบร้อย', 'points' => 1],
+        ['recipient' => 'parent',  'reason' => 'สวมหมวกกันน็อกทั้งผู้ปกครองและเด็ก', 'points' => 5],
+        ['recipient' => 'parent',  'reason' => 'คาดเข็มขัดนิรภัย / ใช้คาร์ซีทให้เด็ก',  'points' => 5],
+        ['recipient' => 'parent',  'reason' => 'จอดรถในจุดรับ-ส่งที่กำหนด',          'points' => 3],
+        ['recipient' => 'parent',  'reason' => 'ขับขี่ช้าและระมัดระวังในเขตโรงเรียน',  'points' => 3],
+        ['recipient' => 'parent',  'reason' => 'ไม่ใช้โทรศัพท์ขณะขับขี่',             'points' => 3],
+        ['recipient' => 'parent',  'reason' => 'มารับ-ส่งตรงเวลา',                  'points' => 2],
+    ];
+    return $recipient === null ? $all : array_values(where($all, 'recipient', $recipient));
+}
+
+/** Pastel backgrounds given to new meals in turn. */
+const MEAL_COLORS = ['#FFF4CC', '#FFE9D6', '#FFF6C7', '#E9F5FF', '#FFE4E4', '#DDF7E6', '#F1EAFF'];
+
+/**
+ * The school's own rows of an editable list (mealTimes / starReasons), or null while the list
+ * is not seeded yet (→ built-in defaults). One school per database, so every row is the school's.
+ * Meals are ordered by time.
+ */
+function catalog_school_list(string $table): ?array
+{
+    $rows = store_rows($table);
+    if (!$rows && empty((store_rows('settings')[0] ?? [])[$table . 'Seeded'])) {
+        return null;
+    }
+    if ($table === 'mealTimes') {
+        usort($rows, fn ($a, $b) => [$a['time'], $a['id']] <=> [$b['time'], $b['id']]);
+    }
+    return $rows;
+}
+
+/**
+ * Copy the built-in defaults into the school's editable lists once (admin opens ตั้งค่าโรงเรียน),
+ * so they can be edited / deleted. The settings row remembers it, so an emptied list stays empty.
+ */
+function catalog_seed_school(int $schoolId): void
+{
+    $settings = where(store_rows('settings'), 'school_id', $schoolId)[0] ?? null;
+    $todo = array_values(array_filter(['mealTimes', 'starReasons'], fn ($t) => $settings && empty($settings[$t . 'Seeded'])));
+    if (!$todo) {
+        return;
+    }
+    mk_log('Catalog', 'catalog_seed_school START', ['school' => $schoolId, 'tables' => $todo]);
+    store_mutate(function (array &$state) use ($schoolId, $todo) {
+        foreach ($todo as $table) {
+            if (!where($state['tables'][$table], 'school_id', $schoolId)) {
+                $defaults = $table === 'mealTimes'
+                    ? array_values(array_filter(catalog_default_meals(), fn ($m) => in_array($m['meal'], pkg()['meals'], true)))
+                    : catalog_default_star_reasons();
+                foreach ($defaults as $row) {
+                    $state['tables'][$table][] = ['id' => $state['nextId']++, 'school_id' => $schoolId] + $row;
+                }
+            }
+            foreach ($state['tables']['settings'] as &$s) {
+                if ($s['school_id'] === $schoolId) {
+                    $s[$table . 'Seeded'] = true;
+                }
+            }
+            unset($s);
+        }
+    });
+    mk_log('Catalog', 'catalog_seed_school END', ['school' => $schoolId]);
 }
 
 /** Find one entry of a catalog list by its code (or meal/reason key). */

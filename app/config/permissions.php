@@ -19,7 +19,9 @@ return [
         'read'  => '*',
         'write' => ['students', 'teachers', 'classrooms', 'activities', 'foodMenus', 'calendarEvents', 'attendance',
             'healthRecords', 'portfolio', 'notifications', 'settings', 'cameras', 'mediaFiles',
-            'users'], // users: Admin / Executive accounts of the own school only (app/pages/api.php)
+            'users', // users: Admin / Executive accounts of the own school only (app/pages/api.php)
+            'schools', // schools: edit the own school only — never create / delete (app/pages/api.php)
+            'mealTimes', 'starReasons'], // school-editable lists (ตั้งค่าโรงเรียน)
     ],
     'executive' => [
         'scope' => 'school',
