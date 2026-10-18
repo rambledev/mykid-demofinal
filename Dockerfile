@@ -32,7 +32,7 @@ RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" \
 # Apache: web root = public/ (front controller + assets only); app/, database/, storage/ stay private.
 COPY docker/apache/mykid.conf /etc/apache2/conf-available/mykid.conf
 RUN sed -ri 's!DocumentRoot /var/www/html!DocumentRoot /var/www/html/public!' /etc/apache2/sites-available/000-default.conf \
-    && a2enmod headers \
+    && a2enmod headers proxy proxy_http \
     && a2enconf mykid
 
 # Application code (read-only for Apache) + writable storage (uploaded images).
