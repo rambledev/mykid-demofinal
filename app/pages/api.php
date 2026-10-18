@@ -22,8 +22,9 @@ if (isset($_POST['action'])) {
 }
 $action = (string) ($input['action'] ?? '');
 $logInput = $input;
-array_walk_recursive($logInput, function (&$v, $k) { // PINs never reach the log
-    if (in_array($k, ['pin', 'current', 'new', 'confirm', 'parentPin'], true)) {
+array_walk_recursive($logInput, function (&$v, $k) { // PINs, RTSP URLs, tokens and credentials never reach the log
+    if (in_array($k, ['pin', 'current', 'new', 'confirm', 'parentPin', 'rtsp_url', 'token', 'password', 'secret'], true)
+        || (is_string($v) && preg_match('#^\s*rtsps?://#i', $v))) {
         $v = '***';
     }
 });
@@ -53,11 +54,14 @@ function in_id(array $input, string $key, string $table): int
     return untok_or_fail($table, $value);
 }
 
-/** Validate submitted values against the table schema. Partial updates only check what is sent. */
-function validate_fields(string $table, array $data, bool $isNew): array
+/**
+ * Validate submitted values against the table schema (or the given $fields, e.g. a smaller form of
+ * the same table). Partial updates only check what is sent.
+ */
+function validate_fields(string $table, array $data, bool $isNew, ?array $fields = null): array
 {
     $clean = [];
-    foreach (table_def($table)['fields'] as $key => $field) {
+    foreach ($fields ?? table_def($table)['fields'] as $key => $field) {
         if ($field['type'] === 'image') {
             continue; // files are handled by core/media.php
         }
@@ -92,6 +96,10 @@ function validate_fields(string $table, array $data, bool $isNew): array
             'secret' => mb_substr((string) $value, 0, 300),
             'select' => array_key_exists((string) $value, field_options($field)) ? (string) $value : throw new ValidationException('กรุณาเลือก “' . $field['label'] . '” จากรายการ'),
             'emoji' => in_array($value, mk_catalog()[$field['options']], true) ? $value : '⭐',
+            // multi-select of classroom id tokens → unique ids (school ownership is checked by the caller)
+            'classrooms' => is_array($value) && count($value) <= 100
+                ? array_values(array_unique(array_map(fn ($t) => untok_or_fail('classrooms', $t), $value)))
+                : throw new ValidationException('กรุณาเลือก “' . $field['label'] . '” จากรายการ'),
             default => mb_substr((string) $value, 0, (int) ($field['max'] ?? 200)),
         };
     }
@@ -158,16 +166,150 @@ function prepare_camera_data(array $data): array
     return [$data, $flags];
 }
 
-/** Replace a camera's cameraPermissions rows (admin form flags). */
-function sync_camera_permissions(int $cameraId, bool $allowTeacher, bool $allowParent): void
+/**
+ * Save one camera + the classrooms it covers (cameraClassrooms) + its view permissions
+ * (cameraPermissions) in ONE store_mutate, so a failure leaves nothing half-written.
+ * Scope comes from the session only: school forced by apply_write_scope(), every picked classroom
+ * must belong to the admin's school, the stored row is re-checked inside the transaction.
+ * Links / permissions are rewritten only when the form sent them (quick-save is_active keeps them).
+ */
+function save_camera(array $user, int $id, array $data): int
 {
-    store_mutate(function (array &$state) use ($cameraId, $allowTeacher, $allowParent) {
-        $index = store_find($state, 'cameras', $cameraId);
-        $camera = $state['tables']['cameras'][$index];
-        $state['tables']['cameraPermissions'] = array_values(array_filter($state['tables']['cameraPermissions'], fn ($p) => $p['camera_id'] !== $cameraId));
-        array_push($state['tables']['cameraPermissions'], ...camera_permission_rows($camera, $allowTeacher, $allowParent, $state['nextId']));
+    [$data, $flags] = prepare_camera_data($data);
+    $ctx = ['user' => $user['id'], 'role' => $user['role'], 'camera_id' => $id ?: null];
+    $existing = $id ? find_row('cameras', $id) : null;
+    if ($id) {
+        authorize($existing !== null && row_in_scope($user, 'cameras', $existing), 'ไม่มีสิทธิ์แก้ไขข้อมูลนอกขอบเขตของบัญชีนี้', $ctx);
+    }
+
+    // Area type + picked rooms → the full list of covered rooms, or null = keep the current links.
+    $area = (string) ($data['area_type'] ?? '');
+    $picked = is_array($data['classroom_ids'] ?? null) ? $data['classroom_ids'] : null;
+    unset($data['area_type'], $data['classroom_ids']);
+    $rooms = match ($area) {
+        'common'    => [], // common area: no room links — viewing still needs a permission row (cctv.php)
+        'classroom' => $picked ?? ($existing ? camera_classroom_ids($existing['id']) : []),
+        default     => $picked ?? ($id ? null : []),
+    };
+    if ($area === 'classroom' && !$rooms) {
+        throw new ValidationException('กรุณาเลือกห้องเรียนที่กล้องครอบคลุมอย่างน้อย 1 ห้อง');
+    }
+    foreach ($rooms ?? [] as $roomId) {
+        $room = find_row('classrooms', $roomId);
+        authorize($room !== null && $room['school_id'] === $user['school_id'], 'ไม่มีสิทธิ์จัดการข้อมูลของห้องนี้', $ctx + ['classroom_id' => $roomId]);
+    }
+    if ($rooms !== null) {
+        $data['classroom_id'] = $rooms[0] ?? null; // first covered room (NULL = common area) for code that reads one room
+    }
+
+    // Camera code: optional (blank = CAM-NN on insert, keep on edit), unique per school (checked in the transaction).
+    $code = strtoupper(trim((string) ($data['code'] ?? '')));
+    unset($data['code']);
+    if ($code !== '') {
+        if (!preg_match('/^[A-Z0-9][A-Z0-9_-]{0,15}$/', $code)) {
+            throw new ValidationException('รหัสกล้องใช้ได้เฉพาะ A-Z, 0-9, - และ _ ไม่เกิน 16 ตัวอักษร');
+        }
+        $data['code'] = $code;
+    }
+    $autoCode = !$id && $code === '';
+
+    $row = apply_write_scope($user, 'cameras', array_merge($existing ?? [], $data));
+    if (!$id) {
+        $row = insert_defaults('cameras', $row, $user);
+    }
+    authorize(row_in_scope($user, 'cameras', $row), 'ไม่มีสิทธิ์จัดการกล้องนอกขอบเขตของบัญชีนี้', $ctx);
+
+    $savedId = store_mutate(function (array &$state) use ($id, $row, $rooms, $flags, $autoCode, $user): int {
+        $cameras = &$state['tables']['cameras'];
+        $index = null;
+        if ($id) {
+            $index = store_find($state, 'cameras', $id);
+            if ($index === null) {
+                throw new ValidationException('ไม่พบข้อมูลนี้ อาจถูกลบไปแล้ว');
+            }
+            authorize(row_in_scope($user, 'cameras', $cameras[$index]), 'ไม่มีสิทธิ์แก้ไขข้อมูลนี้');
+            $row['id'] = $id;
+        } else {
+            $row['id'] = $state['nextId']++;
+        }
+        $taken = array_map(fn ($c) => strtoupper((string) $c['code']),
+            array_filter($cameras, fn ($c) => $c['school_id'] === $row['school_id'] && $c['id'] !== $row['id']));
+        if ($autoCode) {
+            for ($n = count($taken) + 1; in_array(sprintf('CAM-%02d', $n), $taken, true); $n++);
+            $row['code'] = sprintf('CAM-%02d', $n);
+        } elseif (in_array(strtoupper((string) $row['code']), $taken, true)) {
+            throw new ValidationException('รหัสกล้อง “' . $row['code'] . '” มีอยู่แล้วในโรงเรียนนี้');
+        }
+        if ($index === null) {
+            $cameras[] = $row;
+        } else {
+            $cameras[$index] = $row;
+        }
+        unset($cameras);
+
+        $cameraId = $row['id'];
+        if ($rooms !== null) {
+            $links = array_filter($state['tables']['cameraClassrooms'], fn ($l) => $l['camera_id'] !== $cameraId);
+            foreach ($rooms as $roomId) {
+                $links[] = ['id' => $state['nextId']++, 'school_id' => $row['school_id'], 'camera_id' => $cameraId, 'classroom_id' => $roomId];
+            }
+            $state['tables']['cameraClassrooms'] = array_values($links);
+        }
+        if ($flags !== null) {
+            $perms = array_filter($state['tables']['cameraPermissions'], fn ($p) => $p['camera_id'] !== $cameraId);
+            $state['tables']['cameraPermissions'] = array_values(array_merge($perms, camera_permission_rows($row, $flags[0], $flags[1], $state['nextId'])));
+        }
+        return $cameraId;
+    })['result'];
+
+    mk_log('CCTV', 'save_camera END', ['camera' => $savedId, 'rooms' => $rooms, 'allowTeacher' => $flags[0] ?? null, 'allowParent' => $flags[1] ?? null]);
+    return $savedId;
+}
+
+/**
+ * Delete a camera or a classroom together with the rows that point at it, in ONE store_mutate:
+ *   camera    → its cameraClassrooms + cameraPermissions rows
+ *   classroom → its cameraClassrooms rows (+ legacy room-bound cameraPermissions rows); a camera left
+ *               without any room is DEACTIVATED, never silently turned into a common-area camera.
+ * Every other table goes through store_delete() as before.
+ */
+function delete_with_links(string $table, int $id, callable $guard): void
+{
+    if (!in_array($table, ['cameras', 'classrooms'], true)) {
+        store_delete($table, $id, $guard);
+        return;
+    }
+    mk_log('Api', 'delete_with_links START', ['table' => $table, 'id' => $id]);
+    store_mutate(function (array &$state) use ($table, $id, $guard) {
+        $index = store_find($state, $table, $id);
+        if ($index === null) {
+            throw new ValidationException('ไม่พบข้อมูลนี้ อาจถูกลบไปแล้ว');
+        }
+        $guard($state['tables'][$table][$index]);
+        array_splice($state['tables'][$table], $index, 1);
+
+        $key = $table === 'cameras' ? 'camera_id' : 'classroom_id';
+        $touched = array_unique(array_column(where($state['tables']['cameraClassrooms'], $key, $id), 'camera_id'));
+        $state['tables']['cameraClassrooms'] = array_values(array_filter($state['tables']['cameraClassrooms'], fn ($l) => $l[$key] !== $id));
+        $state['tables']['cameraPermissions'] = array_values(array_filter($state['tables']['cameraPermissions'],
+            fn ($p) => $table === 'cameras' ? $p['camera_id'] !== $id : $p['classroom_id'] !== $id));
+
+        if ($table === 'classrooms') { // keep cameras.classroom_id = first remaining room
+            foreach ($state['tables']['cameras'] as &$camera) {
+                if (!in_array($camera['id'], $touched, true) && $camera['classroom_id'] !== $id) {
+                    continue;
+                }
+                $left = array_column(where($state['tables']['cameraClassrooms'], 'camera_id', $camera['id']), 'classroom_id');
+                $camera['classroom_id'] = $left[0] ?? null;
+                if (!$left) {
+                    $camera['is_active'] = false;
+                    mk_log('CCTV', 'camera deactivated: its last classroom was deleted', ['camera' => $camera['id'], 'classroom' => $id]);
+                }
+            }
+            unset($camera);
+        }
     });
-    mk_log('CCTV', 'permissions synced', compact('cameraId', 'allowTeacher', 'allowParent'));
+    mk_log('Api', 'delete_with_links END', ['table' => $table, 'id' => $id]);
 }
 
 try {
@@ -209,10 +351,6 @@ try {
             } elseif ($table === 'students') {
                 account_check_parent($id, $data);
             }
-            $cameraFlags = null;
-            if ($table === 'cameras') {
-                [$data, $cameraFlags] = prepare_camera_data($data);
-            }
 
             if ($table === 'stars') {
                 // ธนาคารความดี: a parent star belongs to the child's parent account (resolved here, never sent by the browser).
@@ -246,7 +384,11 @@ try {
                 }
             }
 
-            if ($id) {
+            if ($table === 'cameras') {
+                // camera + covered classrooms + permissions in one transaction (save_camera)
+                $savedId = save_camera($user, $id, $data);
+                $message = $id ? 'บันทึกการแก้ไขเรียบร้อยแล้ว' : 'เพิ่ม' . table_def($table)['label'] . 'เรียบร้อยแล้ว';
+            } elseif ($id) {
                 $existing = find_row($table, $id);
                 authorize($existing !== null && row_in_scope($user, $table, $existing), 'ไม่มีสิทธิ์แก้ไขข้อมูลนอกขอบเขตของบัญชีนี้', ['table' => $table, 'id' => $id]);
                 $row = apply_write_scope($user, $table, array_merge($existing, $data));
@@ -259,19 +401,12 @@ try {
                 }
                 unset($row['id']);
                 store_update($table, $id, $row, fn ($old) => authorize(row_in_scope($user, $table, $old), 'ไม่มีสิทธิ์แก้ไขข้อมูลนี้'));
-                if ($cameraFlags) {
-                    sync_camera_permissions($id, ...$cameraFlags);
-                }
                 $savedId = $id;
                 $message = 'บันทึกการแก้ไขเรียบร้อยแล้ว';
             } else {
                 $row = insert_defaults($table, apply_write_scope($user, $table, $data), $user);
                 authorize(row_in_scope($user, $table, $row), 'ไม่มีสิทธิ์เพิ่มข้อมูลนอกขอบเขตของบัญชีนี้', ['table' => $table]);
-                $newId = store_insert($table, $row);
-                if ($cameraFlags) {
-                    sync_camera_permissions($newId, ...$cameraFlags);
-                }
-                $savedId = $newId;
+                $savedId = store_insert($table, $row);
                 $message = 'เพิ่ม' . table_def($table)['label'] . 'เรียบร้อยแล้ว';
             }
             if ($table === 'teachers') {
@@ -337,18 +472,39 @@ try {
                 throw new ValidationException('ไม่สามารถลบบัญชีที่กำลังใช้งานอยู่');
             }
             authorize($table !== 'users' || in_array($existing['role'], ['admin', 'executive'], true), 'ลบได้เฉพาะบัญชีผู้ดูแลโรงเรียนและผู้บริหาร', ['id' => $id]);
-            store_delete($table, $id, fn ($old) => authorize(row_in_scope($user, $table, $old), 'ไม่มีสิทธิ์ลบข้อมูลนี้'));
+            // cameras / classrooms: their camera links + permissions go in the same transaction
+            delete_with_links($table, $id, fn ($old) => authorize(row_in_scope($user, $table, $old), 'ไม่มีสิทธิ์ลบข้อมูลนี้'));
             if ($table === 'teachers') {
                 account_remove_teacher($id); // the teacher's login account goes with the record
             } elseif ($table === 'students') {
                 account_unlink_student($id); // parent accounts without any child left are removed
             }
-            if ($table === 'cameras') {
-                store_mutate(function (array &$state) use ($id) {
-                    $state['tables']['cameraPermissions'] = array_values(array_filter($state['tables']['cameraPermissions'], fn ($p) => $p['camera_id'] !== $id));
-                });
-            }
             $message = 'ลบข้อมูลเรียบร้อยแล้ว';
+            break;
+
+        case 'save_camera_settings':
+            // Admin "ตั้งค่ากล้อง CCTV": name, view URL, order, on/off only. School + scope from the session
+            // (save_camera → apply_write_scope / row_in_scope); a new camera starts as a common-area camera
+            // that only admin / executive see until teacher / parent rights are set in "จัดการกล้อง".
+            authorize(can_manage_cameras($user), 'บัญชีนี้ไม่มีสิทธิ์แก้ไขข้อมูลนี้', ['user' => $user['id'], 'role' => $user['role']]);
+            $id = in_id($input, 'id', 'cameras');
+            foreach (camera_settings_fields() as $key => $field) { // too long = rejected, never silently cut (validate_fields trims)
+                $raw = $input['data'][$key] ?? '';
+                if (isset($field['max']) && $field['type'] === 'text' && (!is_scalar($raw) || mb_strlen(trim((string) $raw)) > $field['max'])) {
+                    throw new ValidationException('“' . $field['label'] . '” ต้องไม่เกิน ' . $field['max'] . ' ตัวอักษร');
+                }
+            }
+            $data = validate_fields('cameras', (array) ($input['data'] ?? []), $id === 0, camera_settings_fields());
+            if (array_key_exists('view_url', $data) && !camera_view_url_valid((string) $data['view_url'])) {
+                throw new ValidationException('URL ต้องเป็นที่อยู่ในระบบ เช่น /cctv/cam01/ หรือ https://… เท่านั้น (ห้ามใส่ RTSP หรือรหัสผ่าน)');
+            }
+            if ($id === 0) {
+                $data += ['sort_order' => 0, 'location' => $data['name'], 'area_type' => 'common', 'stream_type' => 'mock',
+                    'stream_url' => '', 'status' => 'online', 'allow_teacher' => '0', 'allow_parent' => '0'];
+            }
+            $savedId = save_camera($user, $id, $data);
+            mk_log('CCTV', 'save_camera_settings', ['camera' => $savedId, 'user' => $user['id'], 'new' => $id === 0]);
+            $message = $id ? 'บันทึกการแก้ไขเรียบร้อยแล้ว' : 'เพิ่มกล้องเรียบร้อยแล้ว';
             break;
 
         case 'camera_stream':
@@ -570,12 +726,12 @@ try {
     mk_log('Api', 'request END', ['action' => $action, 'user' => $user['id'], 'version' => store_state()['version']]);
     json_response(['ok' => true, 'message' => $message, 'version' => store_state()['version'], 'unread' => notifications_unread_count($user), 'chatUnread' => chat_unread_total($user)]);
 } catch (PermissionDeniedException $ex) {
-    mk_log('Api', 'permission ERROR', ['action' => $action, 'user' => $user['id'], 'role' => $user['role'], 'error' => $ex->getMessage(), 'input' => $input]);
+    mk_log('Api', 'permission ERROR', ['action' => $action, 'user' => $user['id'], 'role' => $user['role'], 'error' => $ex->getMessage(), 'input' => $logInput]);
     json_response(['ok' => false, 'message' => $ex->getMessage()], 403);
 } catch (ValidationException $ex) {
-    mk_log('Api', 'validation ERROR', ['action' => $action, 'error' => $ex->getMessage(), 'input' => $input]);
+    mk_log('Api', 'validation ERROR', ['action' => $action, 'error' => $ex->getMessage(), 'input' => $logInput]);
     json_response(['ok' => false, 'message' => $ex->getMessage()], 422);
 } catch (Throwable $ex) {
-    mk_log('Api', 'unexpected ERROR', ['action' => $action, 'error' => $ex->getMessage(), 'file' => $ex->getFile() . ':' . $ex->getLine(), 'input' => $input]);
+    mk_log('Api', 'unexpected ERROR', ['action' => $action, 'error' => $ex->getMessage(), 'file' => $ex->getFile() . ':' . $ex->getLine(), 'input' => $logInput]);
     json_response(['ok' => false, 'message' => 'ระบบกำลังดำเนินการ กรุณาลองใหม่อีกครั้ง'], 500);
 }

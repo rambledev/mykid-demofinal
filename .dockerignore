@@ -27,3 +27,6 @@ docs
 # Real school data for database/import-school.php (children's names — PDPA): never in git / images
 database/data/*.json
 !database/data/*.example.json
+
+# Local test suite (resets its own *_test database) — never shipped in the image
+tests

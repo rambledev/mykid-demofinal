@@ -32,6 +32,7 @@ return [
             ['health', 'สุขภาพ', 'admin/health.php', 'heart', false],
             ['stars', 'ธนาคารความดี', 'admin/stars.php', 'star', false],
             ['cctv', 'กล้องวงจรปิด', 'admin/cctv.php', 'camera', false],
+            ['cctv-settings', 'ตั้งค่ากล้อง CCTV', 'admin/cctv-settings.php', 'camera', false],
             ['storage', 'จัดการพื้นที่จัดเก็บ', 'admin/storage.php', 'image', false],
             ['users', 'ผู้ดูแลและผู้บริหาร', 'admin/users.php', 'users', false],
             ['settings', 'ตั้งค่าโรงเรียน', 'admin/settings.php', 'settings', false],

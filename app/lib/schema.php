@@ -160,10 +160,14 @@ function mk_tables(): array
         'userNotifications' => ['label' => 'แจ้งเตือน', 'level' => 'school', 'fields' => []],
         'cameras' => ['label' => 'กล้องวงจรปิด', 'level' => 'camera', 'fields' => [
             'school_id'     => ['label' => 'โรงเรียน', 'type' => 'school'], // forced from the session (apply_write_scope)
+            'code'          => ['label' => 'รหัสกล้อง (เว้นว่าง = สร้างให้อัตโนมัติ)', 'type' => 'text', 'max' => 16, 'placeholder' => 'เช่น CAM-01'],
             'name'          => ['label' => 'ชื่อกล้อง', 'type' => 'text', 'required' => true, 'max' => 60, 'placeholder' => 'เช่น กล้องหน้าห้องอนุบาล 1'],
             'location'      => ['label' => 'ตำแหน่งติดตั้ง', 'type' => 'text', 'required' => true, 'max' => 80],
             'description'   => ['label' => 'รายละเอียด', 'type' => 'text', 'max' => 120],
-            'classroom_id'  => ['label' => 'ห้องเรียน (เว้นว่าง = พื้นที่ส่วนกลาง)', 'type' => 'classroom'],
+            // area_type + classroom_ids are not columns: save_camera() turns them into camera_classrooms rows
+            // (cameras.classroom_id keeps the first room, NULL = common area) — app/pages/api.php.
+            'area_type'     => ['label' => 'ประเภทพื้นที่', 'type' => 'select', 'required' => true, 'options' => ['classroom' => '🏫 ห้องเรียน', 'common' => '🌳 พื้นที่ส่วนกลาง']],
+            'classroom_ids' => ['label' => 'ห้องเรียนที่กล้องครอบคลุม (เลือกได้หลายห้อง)', 'type' => 'classrooms', 'showIf' => ['area_type', 'classroom']],
             'camera_model'  => ['label' => 'รุ่นกล้อง', 'type' => 'text', 'max' => 40, 'placeholder' => 'เช่น Tapo C200C'],
             'stream_type'   => ['label' => 'ประเภท Stream', 'type' => 'select', 'required' => true, 'options' => STREAM_TYPES],
             'stream_url'    => ['label' => 'Stream URL จาก Media Server', 'type' => 'url', 'max' => 300, 'placeholder' => 'https://media.example/cam01/index.m3u8'],
@@ -174,6 +178,8 @@ function mk_tables(): array
             'allow_parent'  => ['label' => 'ผู้ปกครองดูได้', 'type' => 'select', 'options' => ['1' => 'ได้', '0' => 'ไม่ได้']],
         ]],
         'cameraPermissions' => ['label' => 'สิทธิ์ดูกล้อง', 'level' => 'school', 'fields' => []],
+        // Classrooms a camera covers (written with the camera form only — api.php / cctv.php).
+        'cameraClassrooms' => ['label' => 'ห้องที่กล้องครอบคลุม', 'level' => 'school', 'fields' => []],
         'mediaFiles' => ['label' => 'รูปภาพ', 'level' => 'media', 'fields' => []], // written by core/media.php only
         // School-editable lists (catalog.php): meal key is generated on insert (api.php) and never edited.
         'mealTimes' => ['label' => 'มื้ออาหาร', 'level' => 'school', 'fields' => [

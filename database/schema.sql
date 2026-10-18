@@ -417,6 +417,19 @@ CREATE TABLE IF NOT EXISTS camera_permissions (
     KEY idx_camera (camera_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Classrooms a camera covers (none = common area). No FOREIGN KEY on purpose: store_write_diff()
+-- writes table by table (parents before children), so a RESTRICT key would block deleting a camera /
+-- classroom and CASCADE would delete rows behind the app's back. Links are removed by the app (api.php).
+CREATE TABLE IF NOT EXISTS camera_classrooms (
+    id           INT UNSIGNED NOT NULL PRIMARY KEY,
+    school_id    INT UNSIGNED NOT NULL,
+    camera_id    INT UNSIGNED NOT NULL,
+    classroom_id INT UNSIGNED NOT NULL,
+    extra        JSON NULL,
+    UNIQUE KEY uq_camera_classroom (camera_id, classroom_id),
+    KEY idx_classroom (classroom_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ---------------------------------------------------------------- Media (files live in storage/uploads)
 
 CREATE TABLE IF NOT EXISTS media_files (
@@ -463,6 +476,20 @@ ALTER TABLE students ADD COLUMN IF NOT EXISTS parentPhone VARCHAR(20) NULL AFTER
 -- Chat: when the OTHER side read the message (NULL = unread) → unread badges + "อ่านแล้ว".
 ALTER TABLE messages ADD COLUMN IF NOT EXISTS read_at DATETIME NULL AFTER at;
 ALTER TABLE messages ADD INDEX IF NOT EXISTS idx_student_read (student_id, read_at);
+
+-- CCTV: one camera → many classrooms. Backfill the single cameras.classroom_id as the first link.
+-- id = camera id is free in this table (ids come from the global app_meta nextId sequence) and
+-- INSERT IGNORE + uq_camera_classroom make re-runs a no-op. cameras.classroom_id stays = first link.
+INSERT IGNORE INTO camera_classrooms (id, school_id, camera_id, classroom_id)
+    SELECT id, school_id, id, classroom_id FROM cameras WHERE classroom_id IS NOT NULL;
+
+-- CCTV settings page (admin → ตั้งค่ากล้อง CCTV): the page admins open to watch a camera (e.g. /cctv/cam01/ or
+-- https://…), display order and timestamps. view_url is separate from stream_url (the in-app player source).
+ALTER TABLE cameras ADD COLUMN IF NOT EXISTS view_url VARCHAR(300) NULL DEFAULT '' AFTER stream_url;
+ALTER TABLE cameras ADD COLUMN IF NOT EXISTS sort_order INT NOT NULL DEFAULT 0 AFTER is_active;
+ALTER TABLE cameras ADD COLUMN IF NOT EXISTS created_at DATETIME NULL DEFAULT CURRENT_TIMESTAMP AFTER sort_order;
+ALTER TABLE cameras ADD COLUMN IF NOT EXISTS updated_at DATETIME NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER created_at;
+ALTER TABLE cameras ADD INDEX IF NOT EXISTS idx_school_sort (school_id, sort_order);
 
 -- ---------------------------------------------------------------- Security
 

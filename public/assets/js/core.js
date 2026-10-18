@@ -212,10 +212,15 @@
     form.elements.id.value = record ? record.id : '';
     Array.from(form.elements).forEach((el) => {
       if (!el.name || el.name === 'id' || el.type === 'file' || !(el.name in values)) return;
+      if (el.type === 'checkbox') { // multi-select (data-multi): the record holds an array of values
+        el.checked = Array.isArray(values[el.name]) && values[el.name].map(String).includes(el.value);
+        return;
+      }
       const value = values[el.name] === null ? '' : String(values[el.name]);
       if (el.type === 'radio') el.checked = el.value === value;
       else el.value = value;
     });
+    syncShowIf(form);
     $$('[data-upload-preview]', form).forEach((box) => { box.innerHTML = ''; });
     $$('[data-secret-hint]', form).forEach((hint) => {
       hint.textContent = record && record.rtsp_configured ? '🔐 ตั้งค่าไว้แล้ว — เว้นว่างเพื่อใช้ค่าเดิม (ไม่แสดงค่าจริงเพื่อความปลอดภัย)' : 'ยังไม่ได้ตั้งค่า';
@@ -224,11 +229,26 @@
     $('[data-form-error]', form).hidden = true;
   }
 
+  /** Show / hide fields marked data-show-if="<field>" data-show-value="<value>" (components.php showIf). */
+  function syncShowIf(form) {
+    $$('[data-show-if]', form).forEach((box) => {
+      const control = form.elements[box.dataset.showIf];
+      box.hidden = !control || control.value !== box.dataset.showValue;
+    });
+  }
+
   async function submitForm(form) {
     const table = form.dataset.formTable;
     const id = form.elements.id.value || ''; // secure id token ('' = new row)
     const data = {};
     new FormData(form).forEach((value, key) => { if (key !== 'id' && !(value instanceof File)) data[key] = value; });
+    // Multi-select fields only: always an array (empty when nothing is ticked, so the server can clear it).
+    // Hidden ones (showIf) are left out. Every other field keeps the single-value behaviour above.
+    $$('[data-multi]', form).forEach((box) => {
+      const key = box.dataset.multi;
+      if (box.hidden) { delete data[key]; return; }
+      data[key] = $$(`input[name="${CSS.escape(key)}"]:checked`, box).map((el) => el.value);
+    });
     const imageInput = form.querySelector('[data-image-input]');
     Log.start('submitForm', { table, id, data, images: imageInput ? imageInput.files.length : 0 });
 
@@ -243,7 +263,8 @@
     errorEl.hidden = true;
     const files = imageInput && imageInput.files.length ? await prepareImages(imageInput.files, errorEl) : null;
     if (files === false) return;
-    const result = await runAction(form.querySelector('[type="submit"]'), 'save', { table, id, data }, () => closeSheet(form.closest('.sheet')), files);
+    const action = form.dataset.formAction || 'save'; // e.g. save_camera_settings (render_form_sheet options)
+    const result = await runAction(form.querySelector('[type="submit"]'), action, { table, id, data }, () => closeSheet(form.closest('.sheet')), files);
     if (!result) {
       errorEl.textContent = 'ยังบันทึกไม่ได้ กรุณาตรวจสอบข้อมูลแล้วลองใหม่';
       errorEl.hidden = false;
@@ -882,6 +903,8 @@
       try {
         const data = await api('camera_stream', { camera_id: cam.id }, { quiet: true });
         if (!data.stream) return signal(el, '📡', 'ไม่มีสัญญาณ', cam.code);
+        // streaming switched off / not configured on the server (fail closed): no URL was handed out
+        if (data.stream.type === 'unavailable') return signal(el, '🔒', data.stream.notice || 'ระบบกล้องยังไม่พร้อมใช้งาน', cam.code);
         const driver = Drivers[data.stream.type] || Drivers.mock;
         players.set(el, await driver.mount(el, data.camera, data.stream));
         Log.info('CCTV.mount', data.stream.type, { camera: cam.code });
@@ -1245,6 +1268,8 @@
   document.addEventListener('change', (event) => {
     if (event.target.matches('[data-image-input]')) { previewImages(event.target); return; }
     if (event.target.matches('[data-image-source]')) { Picker.add(event.target); return; }
+    const showIfForm = event.target.form;
+    if (showIfForm && showIfForm.querySelector('[data-show-if]')) syncShowIf(showIfForm);
     const select = event.target.closest('[data-intake-id]');
     if (!select) return;
     runAction(select, 'save_intake', { id: select.dataset.intakeId, meal: select.dataset.meal, level: select.value });

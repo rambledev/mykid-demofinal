@@ -645,6 +645,22 @@
 .cctv-mini__dot { font-size: 14px; }
 .cctv-table td, .cctv-table th { vertical-align: middle; }
 .cctv-table__actions { display: flex; gap: 6px; }
+
+/* Form: multi-select checkbox list (field type "classrooms") + fields hidden by showIf */
+.field[hidden] { display: none; }
+.check-list__item { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); cursor: pointer; }
+.check-list__item input { width: 20px; height: 20px; flex: none; accent-color: var(--primary-strong); }
+.check-list__item:has(input:checked) { border-color: var(--primary-strong); background: var(--primary-2); }
+
+/* Admin → ตั้งค่ากล้อง CCTV: one card row per camera, actions wrap under the text on phones */
+.cctv-settings__item { flex-wrap: wrap; }
+.cctv-settings__info { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1 1 220px; }
+.cctv-settings__info strong { color: var(--ink); }
+.cctv-settings__url { color: var(--ink-soft); overflow-wrap: anywhere; }
+.cctv-settings__info .tone { align-self: flex-start; }
+.cctv-settings__order { display: inline-grid; place-items: center; min-width: 26px; height: 26px; padding: 0 6px; border-radius: 13px; background: var(--primary-2); font-size: 14px; }
+.cctv-settings .person__actions { flex-wrap: wrap; }
+.btn.is-disabled { opacity: .45; pointer-events: none; }
 .field__hint { color: var(--ink-soft); }
 
 /* Viewer (modal → real fullscreen via the Fullscreen API) */

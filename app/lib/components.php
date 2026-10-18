@@ -532,6 +532,20 @@ function render_field(string $key, array $field): void
     $required = !empty($field['required']);
     $label = '<span class="field__label">' . e($field['label']) . ($required ? '' : ' <small>(ไม่บังคับ)</small>') . '</span>';
     $attrs = 'name="' . e($key) . '"' . ($required ? ' required' : '');
+    // showIf [field, value]: shown only while that field has that value (core.js syncShowIf)
+    $showIf = isset($field['showIf']) ? ' data-show-if="' . e($field['showIf'][0]) . '" data-show-value="' . e($field['showIf'][1]) . '"' : '';
+
+    if ($field['type'] === 'classrooms') {
+        // Multi-select: checkboxes sent as an array (data-multi → core.js submitForm). Values are id tokens.
+        echo '<fieldset class="field check-list" data-multi="' . e($key) . '"' . $showIf . '><legend class="field__label">' . e($field['label']) . '</legend>';
+        $rooms = my_classrooms();
+        foreach ($rooms as $room) {
+            echo '<label class="check-list__item"><input type="checkbox" name="' . e($key) . '" value="' . e(tok('classrooms', $room['id'])) . '"><span>' . e(classroom_label($room)) . '</span></label>';
+        }
+        echo $rooms ? '' : '<p class="hint">ยังไม่มีห้องเรียน — เพิ่มห้องเรียนก่อน</p>';
+        echo '</fieldset>';
+        return;
+    }
 
     if ($field['type'] === 'emoji') {
         echo '<fieldset class="field icon-picker"><legend class="field__label">' . e($field['label']) . '</legend><div class="icon-picker__grid">';
@@ -542,7 +556,7 @@ function render_field(string $key, array $field): void
         return;
     }
 
-    echo '<label class="field">' . $label;
+    echo '<label class="field"' . $showIf . '>' . $label;
     switch ($field['type']) {
         case 'textarea':
             echo '<textarea class="input" rows="2" ' . $attrs . ' maxlength="' . (int) ($field['max'] ?? 200) . '" placeholder="' . e($field['placeholder'] ?? '') . '"></textarea>';
@@ -604,13 +618,18 @@ function render_field(string $key, array $field): void
     echo '</label>';
 }
 
-/** Bottom-sheet form for a table. $hide = fields not shown (forced by scope, e.g. classroom for teachers). */
-function render_form_sheet(string $table, string $title, array $hide = []): void
+/**
+ * Bottom-sheet form for a table. $hide = fields not shown (forced by scope, e.g. classroom for teachers).
+ * $options: 'fields' = a smaller field set of the same table, 'action' = api action instead of "save"
+ * (the server validates against the same set, e.g. save_camera_settings).
+ */
+function render_form_sheet(string $table, string $title, array $hide = [], array $options = []): void
 {
     $def = table_def($table);
     render_sheet_open('sheet-form-' . $table, $title, 'ข้อมูลจะถูกบันทึกตามสิทธิ์ของบัญชีนี้');
-    echo '<form class="form" data-form-table="' . e($table) . '" data-title-add="' . e('เพิ่ม' . $def['label']) . '" data-title-edit="' . e('แก้ไข' . $def['label']) . '" novalidate><input type="hidden" name="id" value="">';
-    foreach ($def['fields'] as $key => $field) {
+    echo '<form class="form" data-form-table="' . e($table) . '"' . (isset($options['action']) ? ' data-form-action="' . e($options['action']) . '"' : '')
+        . ' data-title-add="' . e('เพิ่ม' . $def['label']) . '" data-title-edit="' . e('แก้ไข' . $def['label']) . '" novalidate><input type="hidden" name="id" value="">';
+    foreach ($options['fields'] ?? $def['fields'] as $key => $field) {
         if (!in_array($key, $hide, true)) {
             render_field($key, $field);
         }

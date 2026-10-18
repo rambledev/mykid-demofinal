@@ -15,6 +15,7 @@ return [
         ['GET|POST', '/login',         'login'],
         ['POST',     '/logout',        'logout'],
         ['POST',     '/api',           'api',     ['json' => true]],
+        ['POST',     '/api/media-auth', 'media-auth', ['stateless' => true]], // MediaMTX HTTP auth callback (app/lib/cctv.php)
         ['GET',      '/media/{token}', 'media'],
         ['GET',      '/healthz',       'healthz', ['stateless' => true]],
         ['GET',      '/readyz',        'readyz',  ['stateless' => true]],
@@ -35,6 +36,7 @@ return [
             'attendance' => 'admin/attendance',
             'calendar'   => 'admin/calendar',
             'cctv'       => 'common/cctv',
+            'cctv-settings' => 'admin/cctv-settings',
             'classrooms' => 'admin/classrooms',
             'food'       => 'admin/food',
             'health'     => 'admin/health',

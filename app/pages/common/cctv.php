@@ -19,7 +19,7 @@ $scopeNote = match ($user['role']) {
     'teacher'     => 'แสดงกล้องห้อง' . $user['classroom']['name'] . ' และพื้นที่ส่วนกลางที่โรงเรียนอนุญาต',
     'parent'      => 'แสดงเฉพาะกล้องที่เกี่ยวข้องกับ' . $user['child']['nickname'] . ' และพื้นที่ส่วนกลางที่โรงเรียนอนุญาต',
 };
-$actions = $manage ? btn_add('cameras', 'เพิ่มกล้อง', ['stream_type' => 'mock', 'status' => 'online', 'is_active' => '1', 'allow_teacher' => '1', 'allow_parent' => '0', 'camera_model' => 'Tapo C200C'])
+$actions = $manage ? btn_add('cameras', 'เพิ่มกล้อง', ['area_type' => 'classroom', 'stream_type' => 'mock', 'status' => 'online', 'is_active' => '1', 'allow_teacher' => '1', 'allow_parent' => '0', 'camera_model' => 'Tapo C200C'])
     : ($user['role'] === 'executive' ? '<span class="readonly-badge">👁️ อ่านอย่างเดียว</span>' : '');
 
 mk_header(['id' => $user['role'] . '-cctv', 'title' => 'กล้องวงจรปิด', 'nav' => 'cctv']);
