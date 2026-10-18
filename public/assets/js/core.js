@@ -856,11 +856,23 @@
         async mount(el, cam, stream) {
           const video = videoShell(el, cam);
           let hls = null;
-          if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            video.src = stream.url; // Safari / iOS play HLS natively
+          // hls.js whenever Media Source Extensions exist: recent desktop Chrome answers canPlayType()
+          // "maybe" for HLS, but its native player fails (DEMUXER_ERROR_COULD_NOT_PARSE → black video)
+          // on MediaMTX's LL-HLS fMP4 while the playlist still has EXT-X-GAP parts (muxer just started).
+          // Native HLS only where hls.js cannot run (iPhone without MSE) or its CDN script fails.
+          const hasMse = Boolean(window.MediaSource || window.ManagedMediaSource);
+          const canNative = Boolean(video.canPlayType('application/vnd.apple.mpegurl'));
+          let useHlsJs = hasMse;
+          if (useHlsJs) {
+            try { await loadHlsJs(); } catch (error) { if (!canNative) throw error; Log.error('CCTV.hls', 'hls.js load failed, native fallback', { camera: cam.code }); }
+            useHlsJs = Boolean(window.Hls && window.Hls.isSupported());
+          }
+          Log.info('CCTV.hls', useHlsJs ? 'hls.js' : 'native', { camera: cam.code, mse: hasMse, native: canNative });
+          if (!useHlsJs) {
+            if (!canNative) throw new UserError('เบราว์เซอร์นี้ไม่รองรับ HLS');
+            video.addEventListener('error', () => { Log.error('CCTV.hls', 'native playback error', { camera: cam.code, code: video.error && video.error.code }); signal(el, '📡', 'การเชื่อมต่อสัญญาณขัดข้อง', 'กรุณาลองใหม่อีกครั้ง'); }, { once: true });
+            video.src = stream.url; // Safari / iOS without MSE play HLS natively
           } else {
-            await loadHlsJs();
-            if (!window.Hls || !window.Hls.isSupported()) throw new UserError('เบราว์เซอร์นี้ไม่รองรับ HLS');
             hls = new window.Hls({ lowLatencyMode: true, liveSyncDurationCount: 2 });
             hls.on(window.Hls.Events.ERROR, (_e, data) => { if (data.fatal) { Log.error('CCTV.hls', data.type, { camera: cam.code }); signal(el, '📡', 'การเชื่อมต่อสัญญาณขัดข้อง', 'กรุณาลองใหม่อีกครั้ง'); } });
             hls.loadSource(stream.url);
