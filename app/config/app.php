@@ -43,7 +43,7 @@ return [
             ['home', 'ภาพรวม', 'executive/index.php', 'home', true],
             ['dashboard', 'แดชบอร์ด', 'executive/dashboard.php', 'chart', true],
             ['reports', 'รายงาน', 'executive/reports.php', 'report', true],
-            ['stars', 'ธนาคารความดี', 'executive/stars.php', 'star', false],
+            ['stars', 'ธนาคารความดี', 'executive/stars.php', 'star', true], // all 6 in the bottom nav → no "เมนู" button
             ['cctv', 'กล้องวงจรปิด', 'executive/cctv.php', 'camera', true],
             ['account', 'บัญชี', 'executive/account.php', 'user', true],
         ],

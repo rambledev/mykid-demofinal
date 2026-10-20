@@ -164,7 +164,12 @@ $ok = $stream('parent', 'ACC-C1');
 T::ok('allowed response carries no RTSP / secrets', ($ok['ok'] ?? false) && !str_contains(json_encode($ok), 'rtsp') && !isset($ok['camera']['stream_url']));
 
 T::section('9. CCTV pages + dashboards for every role');
-$pages = ['admin' => ['/admin/cctv', '/admin'], 'executive' => ['/executive/cctv', '/executive'], 'teacher' => ['/teacher/cctv', '/teacher'], 'parent' => ['/parent/cctv', '/parent']];
+[, $execHome] = $clients['executive']->get('/executive');
+T::ok('executive bottom nav: no "เมนู" button, every menu item shown (ธนาคารความดี too)',
+    !str_contains($execHome, 'href="/executive/menu"') && str_contains($execHome, 'class="bottom-nav"') && str_contains($execHome, 'href="/executive/stars"'));
+// "/menu" = the bottom-nav "เมนู" page every role gets when it has more menu items than fit
+$pages = ['admin' => ['/admin/cctv', '/admin', '/admin/menu'], 'executive' => ['/executive/cctv', '/executive'],
+    'teacher' => ['/teacher/cctv', '/teacher', '/teacher/menu'], 'parent' => ['/parent/cctv', '/parent', '/parent/menu']];
 $shown = ['admin' => $allA, 'executive' => $allA, 'teacher' => ['ACC-C1', 'ACC-C2', 'ACC-C3', 'ACC-C4'], 'parent' => ['ACC-C1', 'ACC-C4', 'ACC-C7']];
 foreach ($pages as $role => $paths) {
     foreach ($paths as $path) {
