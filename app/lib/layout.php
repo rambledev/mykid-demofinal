@@ -75,6 +75,7 @@ function render_appbar(array $user): void
                 <span class="appbar__who-text"><strong><?= e($user['name']) ?></strong><small><?= e($user['scopeLabel']) ?></small></span>
             </span>
             <span class="scope-lock" title="บัญชีนี้เข้าถึงได้<?= e($user['lockLabel']) ?>">🔒 <?= e($user['lockLabel']) ?></span>
+            <a class="appbar__manual" href="<?= e(url($role['dir'] . '/manual')) ?>" aria-label="คู่มือการใช้งาน" title="คู่มือการใช้งาน"><?= icon('book') ?></a>
             <form class="logout-form" method="post" action="<?= e(url('logout')) ?>"><?= csrf_field() ?><button type="submit" class="appbar__logout" aria-label="ออกจากระบบ" title="ออกจากระบบ"><?= icon('logout') ?></button></form>
         </div>
     </header>
@@ -120,6 +121,7 @@ function render_sidebar(array $user, string $active): void
                 </a>
             <?php endforeach; ?>
         </nav>
+        <a class="sidebar__item sidebar__manual<?= $active === 'manual' ? ' is-active' : '' ?>" href="<?= e(url($user['meta']['dir'] . '/manual')) ?>"><?= icon('book') ?><span>คู่มือการใช้งาน</span></a>
         <form class="logout-form" method="post" action="<?= e(url('logout')) ?>"><?= csrf_field() ?><button type="submit" class="sidebar__item sidebar__logout"><?= icon('logout') ?><span>ออกจากระบบ</span></button></form>
     </aside>
     <?php

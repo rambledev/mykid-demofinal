@@ -75,5 +75,5 @@ export async function launch() {
     await sleep(300);
     rmSync(profile, { recursive: true, force: true });
   };
-  return { evaluate, goto, setSession, jsErrors, close };
+  return { evaluate, goto, setSession, jsErrors, close, send };
 }
