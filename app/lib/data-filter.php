@@ -196,22 +196,38 @@ function today_by_student(string $table): array
 const STAR_BANK_NAME = 'ธนาคารความดี';
 const STAR_BANK_FULL_NAME = 'ธนาคารความดีขับขี่ปลอดภัย';
 
-/** Star rows of one recipient kind ('student' | 'parent'), newest first. */
-function star_rows(string $recipient = 'student', ?array $rows = null): array
+/** 'good' (ความดี) | 'safe_driving' (ขับขี่ปลอดภัย); rows from before categories: a parent star = safe_driving. */
+function star_category(array $row): string
 {
-    $rows = array_values(array_filter($rows ?? scoped('stars'), fn ($r) => ($r['recipient'] ?? 'student') === $recipient));
+    $category = (string) ($row['category'] ?? '');
+    if ($category === 'safe_driving' || ($row['recipient'] ?? 'student') === 'parent') {
+        return 'safe_driving';
+    }
+    return 'good';
+}
+
+/** Star rows (all of them, or one category), newest first. Every row is credited to its student_id. */
+function star_rows(?string $category = null, ?array $rows = null): array
+{
+    $rows = array_values(array_filter($rows ?? scoped('stars'), fn ($r) => $category === null || star_category($r) === $category));
     usort($rows, fn ($a, $b) => [$b['date'], $b['id']] <=> [$a['date'], $a['id']]);
     return $rows;
 }
 
+/** A student's bank: good deeds + safe driving together. */
 function student_stars(int $studentId): array
 {
-    return where(star_rows('student'), 'student_id', $studentId);
+    return where(star_rows(), 'student_id', $studentId);
 }
 
-function parent_stars(int $parentId): array
+/** [category => stars] of some rows, every category present. */
+function stars_by_category(array $rows): array
 {
-    return where(star_rows('parent'), 'parent_id', $parentId);
+    $totals = array_fill_keys(array_column(mk_catalog()['starCategories'], 'code'), 0);
+    foreach ($rows as $r) {
+        $totals[star_category($r)] += (int) $r['points'];
+    }
+    return $totals;
 }
 
 function stars_total(array $rows): int

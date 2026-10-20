@@ -277,6 +277,15 @@
     if (confirmed) await runAction(button, 'delete', { table, id });
   }
 
+  /** Preset chip in a form (components.php field type "presets"): fill reason + points of that form. */
+  function fillPreset(button) {
+    const form = button.form;
+    if (!form) return;
+    if (form.elements.reason) form.elements.reason.value = button.dataset.reason;
+    if (form.elements.points) form.elements.points.value = button.dataset.points;
+    Log.info('fillPreset', { reason: button.dataset.reason, points: button.dataset.points });
+  }
+
   function quickSave(button) {
     const { table, id, field, value } = button.dataset;
     return runAction(button, 'save', { table, id, data: { [field]: value } });
@@ -1222,6 +1231,7 @@
     'open-form': openForm,
     delete: deleteRecord,
     'quick-save': quickSave,
+    'fill-preset': fillPreset,
     'set-status': setStatus,
     'edit-meal': (b) => toggleMealEdit(b, true),
     'cancel-meal': (b) => toggleMealEdit(b, false),

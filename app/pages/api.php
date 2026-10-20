@@ -62,8 +62,8 @@ function validate_fields(string $table, array $data, bool $isNew, ?array $fields
 {
     $clean = [];
     foreach ($fields ?? table_def($table)['fields'] as $key => $field) {
-        if ($field['type'] === 'image') {
-            continue; // files are handled by core/media.php
+        if (in_array($field['type'], ['image', 'presets'], true)) {
+            continue; // files are handled by core/media.php · presets are a form picker, never stored
         }
         $present = array_key_exists($key, $data);
         $value = $present ? $data[$key] : null;
@@ -121,7 +121,7 @@ function insert_defaults(string $table, array $row, array $user): array
         'classrooms' => $row + ['emoji' => '🐣', 'color' => '#FFF4CC', 'capacity' => 20],
         'schools'    => $row + ['emoji' => '🏫', 'color' => '#FFF4CC', 'status' => 'active'],
         'users'      => $row + ['classroom_id' => null, 'student_id' => null, 'teacher_id' => null],
-        'stars'      => $row + ['recipient' => 'student', 'date' => today(), 'by' => $user['teacher_id']],
+        'stars'      => $row + ['recipient' => 'student', 'category' => 'good', 'date' => today(), 'by' => $user['teacher_id']],
         // new meal: a stable random key (food_menus / food_intake refer to it) + the next pastel colour
         'mealTimes'  => $row + ['meal' => 'm' . bin2hex(random_bytes(4)), 'color' => MEAL_COLORS[count(store_rows('mealTimes')) % count(MEAL_COLORS)]],
         'portfolio'  => ['date' => ($row['date'] ?? '') !== '' ? $row['date'] : today()] + $row + ['art' => random_int(0, 5)],
@@ -334,7 +334,7 @@ try {
             if ($id === 0) {
                 // New rows always carry every schema column (optional ones empty), so views never miss a key.
                 foreach (table_def($table)['fields'] as $key => $field) {
-                    if ($field['type'] !== 'image') {
+                    if (!in_array($field['type'], ['image', 'presets'], true)) {
                         $data += [$key => in_array($field['type'], ['classroom', 'student', 'school', 'number'], true) ? null : ''];
                     }
                 }
@@ -353,18 +353,14 @@ try {
             }
 
             if ($table === 'stars') {
-                // ธนาคารความดี: a parent star belongs to the child's parent account (resolved here, never sent by the browser).
+                // ธนาคารความดี: every star is credited to the student. A safe_driving star also records the child's
+                // parent account (first link, resolved here, never sent by the browser) — informational only, the
+                // star counts whether or not the parent has an account.
                 $existingStar = $id ? find_row('stars', $id) : null;
-                $recipient = $data['recipient'] ?? ($existingStar['recipient'] ?? 'student');
+                $category = $data['category'] ?? ($existingStar ? star_category($existingStar) : 'good');
                 $studentId = $data['student_id'] ?? ($existingStar['student_id'] ?? null);
-                $data['parent_id'] = null;
-                if ($recipient === 'parent') {
-                    $parents = $studentId ? student_parent_ids((int) $studentId) : [];
-                    if (!$parents) {
-                        throw new ValidationException('นักเรียนคนนี้ยังไม่มีบัญชีผู้ปกครองในระบบ');
-                    }
-                    $data['parent_id'] = $parents[0];
-                }
+                $data['recipient'] = 'student';
+                $data['parent_id'] = $category === 'safe_driving' && $studentId ? (student_parent_ids((int) $studentId)[0] ?? null) : null;
             }
             if ($table === 'users') {
                 if (!$id) {

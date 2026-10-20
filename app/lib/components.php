@@ -547,6 +547,23 @@ function render_field(string $key, array $field): void
         return;
     }
 
+    if ($field['type'] === 'presets') {
+        // Picker only (never submitted): one button list per option of the `for` field (e.g. star category);
+        // a tap fills `reason` + `points` (core.js "fill-preset"), the list shown follows the `for` field (showIf).
+        foreach (mk_catalog()[$field['options']] as $group) {
+            $items = mk_catalog()[$group['presets']] ?? [];
+            echo '<fieldset class="field preset-list" data-show-if="' . e($field['for']) . '" data-show-value="' . e($group['code']) . '">'
+                . '<legend class="field__label">' . e($field['label']) . '</legend><div class="chip-row">';
+            foreach ($items as $item) {
+                echo '<button type="button" class="chip-btn" data-action="fill-preset" data-reason="' . e($item['reason']) . '" data-points="' . (int) $item['points'] . '">'
+                    . e($item['reason']) . ' · +' . (int) $item['points'] . ' ⭐</button>';
+            }
+            echo $items ? '' : '<p class="hint">ยังไม่มีรายการสำเร็จรูป — Admin เพิ่มได้ที่ ตั้งค่าโรงเรียน</p>';
+            echo '</div></fieldset>';
+        }
+        return;
+    }
+
     if ($field['type'] === 'emoji') {
         echo '<fieldset class="field icon-picker"><legend class="field__label">' . e($field['label']) . '</legend><div class="icon-picker__grid">';
         foreach (mk_catalog()[$field['options']] as $i => $emoji) {
@@ -781,7 +798,8 @@ function render_star_history(array $rows, int $limit = 20): void
     }
     echo '<ol class="star-history">';
     foreach (array_slice($rows, 0, $limit) as $r) {
-        echo '<li><span class="star-history__points">+' . (int) $r['points'] . ' ⭐</span><span>' . e($r['reason']) . '</span><time>' . e(thai_short_date($r['date'])) . '</time></li>';
+        $emoji = star_category($r) === 'safe_driving' ? '🛵 ' : '🧒 '; // category of the star (ความดี / ขับขี่ปลอดภัย)
+        echo '<li><span class="star-history__points">+' . (int) $r['points'] . ' ⭐</span><span>' . $emoji . e($r['reason']) . '</span><time>' . e(thai_short_date($r['date'])) . '</time></li>';
     }
     echo '</ol>';
 }

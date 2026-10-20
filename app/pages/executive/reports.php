@@ -117,8 +117,10 @@ page_title('📑', 'รายงานภาพรวม', $user['school']['name
             <?php $health = count_by(today_rows(scoped('healthRecords')), 'condition'); ?>
             <ul class="menu-list">
                 <?php $monthStars = stars_in_month(scoped('stars'), date('Y-m')); ?>
-                <li><span>🧒 ดาวนักเรียน (<?= e(thai_month_label(date('Y-m'))) ?>)</span><strong><?= stars_total(star_rows('student', $monthStars)) ?> ดาว</strong></li>
-                <li><span>🛵 ดาวผู้ปกครอง ขับขี่ปลอดภัย</span><strong><?= stars_total(star_rows('parent', $monthStars)) ?> ดาว</strong></li>
+                <?php $starSplit = stars_by_category($monthStars); ?>
+                <li><span>⭐ ดาวสะสม (<?= e(thai_month_label(date('Y-m'))) ?>)</span><strong><?= array_sum($starSplit) ?> ดาว</strong></li>
+                <li><span>🧒 ความดีของนักเรียน</span><strong><?= $starSplit['good'] ?> ดาว</strong></li>
+                <li><span>🛵 ขับขี่ปลอดภัย</span><strong><?= $starSplit['safe_driving'] ?> ดาว</strong></li>
                 <li><span>💚 สุขภาพปกติ (วันนี้)</span><strong><?= $health['normal'] ?? 0 ?> คน</strong></li>
                 <li><span>🟡 เฝ้าระวัง (วันนี้)</span><strong><?= $health['watch'] ?? 0 ?> คน</strong></li>
                 <li><span>😴 นอนกลางวันแล้ว</span><strong><?= count(array_filter(today_rows(scoped('sleepRecords')), fn ($s) => $s['end'] !== '')) ?> คน</strong></li>

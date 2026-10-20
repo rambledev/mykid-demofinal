@@ -77,9 +77,15 @@ function mk_catalog(): array
         'starReasons'       => $starReasons !== null ? array_values(where($starReasons, 'recipient', 'student')) : catalog_default_star_reasons('student'),
         // ธนาคารความดีขับขี่ปลอดภัย — parents earn stars for safe driving at drop-off / pick-up.
         'parentStarReasons' => $starReasons !== null ? array_values(where($starReasons, 'recipient', 'parent')) : catalog_default_star_reasons('parent'),
+        // Which preset list a starReasons row belongs to (student = ความดี, parent = ขับขี่ปลอดภัย).
         'starRecipients' => [
-            ['code' => 'student', 'label' => 'นักเรียน',  'emoji' => '🧒'],
-            ['code' => 'parent',  'label' => 'ผู้ปกครองของนักเรียน (ขับขี่ปลอดภัย)', 'emoji' => '👨‍👩‍👧'],
+            ['code' => 'student', 'label' => 'ความดีของนักเรียน',  'emoji' => '🧒'],
+            ['code' => 'parent',  'label' => 'ขับขี่ปลอดภัย (ผู้ปกครองรับ-ส่ง)', 'emoji' => '🛵'],
+        ],
+        // ธนาคารความดี categories — every star is credited to the student; 'presets' = its preset list.
+        'starCategories' => [
+            ['code' => 'good',         'label' => 'ความดีของนักเรียน',          'emoji' => '🧒', 'presets' => 'starReasons'],
+            ['code' => 'safe_driving', 'label' => 'ขับขี่ปลอดภัย (ผู้ปกครองรับ-ส่ง)', 'emoji' => '🛵', 'presets' => 'parentStarReasons'],
         ],
         'portfolioCategories' => [
             ['code' => 'art',     'label' => 'ศิลปะ',       'emoji' => '🎨'],

@@ -462,6 +462,12 @@ ALTER TABLE stars ADD COLUMN IF NOT EXISTS recipient VARCHAR(10) NOT NULL DEFAUL
 ALTER TABLE stars ADD COLUMN IF NOT EXISTS parent_id INT UNSIGNED NULL AFTER recipient;
 ALTER TABLE stars ADD INDEX IF NOT EXISTS idx_recipient_date (recipient, date);
 
+-- ธนาคารความดี categories: every star counts in the STUDENT's bank (student_id); category = good (ความดี)
+-- or safe_driving (ขับขี่ปลอดภัย, the parent driving the child). Stars given to a parent before this change
+-- (recipient = 'parent', already carrying the child's student_id) become safe_driving. Re-runs change nothing.
+ALTER TABLE stars ADD COLUMN IF NOT EXISTS category VARCHAR(16) NOT NULL DEFAULT 'good' AFTER recipient;
+UPDATE stars SET category = 'safe_driving' WHERE recipient = 'parent' AND category = 'good';
+
 -- Accounts created by the admin start with the default PIN and must set their own PIN at the first login.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_pin TINYINT(1) NOT NULL DEFAULT 0 AFTER pin;
 

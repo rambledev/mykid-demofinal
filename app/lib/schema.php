@@ -104,13 +104,15 @@ function mk_tables(): array
             'status'     => ['label' => 'สถานะ', 'type' => 'text', 'required' => true, 'max' => 60],
             'note'       => ['label' => 'หมายเหตุ', 'type' => 'textarea', 'max' => 200],
         ]],
-        // ธนาคารความดีขับขี่ปลอดภัย: stars for a student, or for the student's parent (recipient = parent →
-        // parent_id resolved on the server from parentStudents; student_id keeps the row in the child's scope).
+        // ธนาคารความดี: every star is credited to the STUDENT (student_id), in one of two categories —
+        // good (ความดี) or safe_driving (ขับขี่ปลอดภัย, the parent driving the child; parent_id = that parent's
+        // account when one exists, resolved on the server). 'preset' is a picker only (not stored).
         'stars' => ['label' => 'ดาวธนาคารความดี', 'level' => 'student', 'fields' => [
-            'recipient'  => ['label' => 'ให้ดาวกับ', 'type' => 'select', 'required' => true, 'options' => 'starRecipients'],
-            'student_id' => ['label' => 'นักเรียน (ผู้ปกครอง: เลือกนักเรียนของผู้ปกครองคนนั้น)', 'type' => 'student', 'required' => true, 'schoolWide' => true],
+            'category'   => ['label' => 'หมวด', 'type' => 'select', 'required' => true, 'options' => 'starCategories'],
+            'student_id' => ['label' => 'นักเรียน', 'type' => 'student', 'required' => true, 'schoolWide' => true],
+            'preset'     => ['label' => 'รายการสำเร็จรูป (กดเพื่อเติมให้)', 'type' => 'presets', 'for' => 'category', 'options' => 'starCategories'],
             'points'     => ['label' => 'จำนวนดาว', 'type' => 'number', 'min' => 1, 'max' => 10, 'required' => true],
-            'reason'     => ['label' => 'ความดีที่ทำ', 'type' => 'text', 'required' => true, 'max' => 60, 'placeholder' => 'เช่น ช่วยเก็บของ / สวมหมวกกันน็อก', 'suggest' => ['starReasons', 'parentStarReasons']],
+            'reason'     => ['label' => 'ความดีที่ทำ', 'type' => 'text', 'required' => true, 'max' => 60, 'placeholder' => 'เช่น ช่วยเก็บของ / สวมหมวกกันน็อก'],
         ]],
         'development' => ['label' => 'พัฒนาการ', 'level' => 'student', 'fields' => [
             'student_id' => ['label' => 'นักเรียน', 'type' => 'student', 'required' => true],

@@ -44,9 +44,9 @@ page_title('⚙️', 'ตั้งค่าพื้นฐาน', $school['name
             <?= empty_state('🍽️', 'ยังไม่มีมื้ออาหาร') ?>
         <?php endif; ?>
     </section>
-    <?php foreach (['student' => ['🧒', 'รายการทำความดีสำเร็จรูป · นักเรียน'], 'parent' => ['🛵', 'รายการทำความดีสำเร็จรูป · ผู้ปกครอง (ขับขี่ปลอดภัย)']] as $recipient => [$emoji, $title]): ?>
+    <?php foreach (['student' => ['🧒', 'รายการสำเร็จรูป · ความดีของนักเรียน'], 'parent' => ['🛵', 'รายการสำเร็จรูป · ขับขี่ปลอดภัย (ผู้ปกครองรับ-ส่ง)']] as $recipient => [$emoji, $title]): ?>
         <section class="card">
-            <?php section_head($emoji, $title, btn_add('starReasons', 'เพิ่มรายการ', ['recipient' => $recipient]), 'ครูเลือกได้ทันทีตอนให้ดาวในธนาคารความดี'); ?>
+            <?php section_head($emoji, $title, btn_add('starReasons', 'เพิ่มรายการ', ['recipient' => $recipient]), 'ครูกดเลือกตอนให้ดาว ระบบเติมข้อความและจำนวนดาวให้ · ดาวทุกหมวดรวมเข้าธนาคารความดีของนักเรียน'); ?>
             <?php if (!empty($reasons[$recipient])): ?>
                 <ul class="menu-list">
                     <?php foreach ($reasons[$recipient] as $r): ?>
